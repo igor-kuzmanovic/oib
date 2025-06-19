@@ -44,7 +44,30 @@ namespace Server
                 Console.WriteLine("Audit failure log failed: " + e.Message);
             }
         }
+        private bool PerformAsEditor(Action action, string operationName)
+        {
+            string user = GetCurrentUser();
+            try
+            {
+                bool result = ImpersonationHelper.ExecuteAsEditor(
+                    ImpersonationConfig.Domain,
+                    ImpersonationConfig.Username,
+                    ImpersonationConfig.Password,
+                    action);
 
+                if (!result)
+                {
+                    LogFailure(user, $"Failed to impersonate Editor user for {operationName}");
+                    throw new FaultException($"Failed to impersonate Editor user for {operationName}");
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LogFailure(user, $"Impersonation error in {operationName}: {ex.Message}");
+                throw new FaultException($"Error during {operationName} operation.");
+            }
+        }
         public bool CreateFile(string path, FileData fileData)
         {
             string user = GetCurrentUser();
@@ -58,18 +81,23 @@ namespace Server
 
             try
             {
-                using (Aes aes = Aes.Create())
+                return PerformAsEditor(() =>
                 {
-                    aes.Mode = CipherMode.CBC;
-                    aes.Key = EncryptionHelper.GetSecretKey(); // Implement securely
-                    aes.IV = fileData.InitializationVector;
-
-                    using (FileStream fs = new FileStream(path, FileMode.Create))
-                    using (CryptoStream cs = new CryptoStream(fs, aes.CreateDecryptor(), CryptoStreamMode.Write))
+                    using (Aes aes = Aes.Create())
                     {
-                        cs.Write(fileData.Content, 0, fileData.Content.Length);
+                        aes.Mode = CipherMode.CBC;
+                        aes.Key = EncryptionHelper.GetSecretKey(); // Implement securely
+                        aes.IV = fileData.InitializationVector;
+
+                        using (FileStream fs = new FileStream(path, FileMode.Create))
+                        using (CryptoStream cs = new CryptoStream(fs, aes.CreateDecryptor(), CryptoStreamMode.Write))
+                        {
+                            cs.Write(fileData.Content, 0, fileData.Content.Length);
+                        }
                     }
-                }
+
+                    Audit.FileCreated(user, path);
+                }, "CreateFile");
 
                 LogSuccess(user);
                 return true;
@@ -80,7 +108,6 @@ namespace Server
                 throw new FaultException("Error while creating file.");
             }
         }
-
         public bool CreateFolder(string path)
         {
             string user = GetCurrentUser();
@@ -94,7 +121,12 @@ namespace Server
 
             try
             {
-                Directory.CreateDirectory(path);
+                return PerformAsEditor(() =>
+                {
+                    Directory.CreateDirectory(path);
+                    Audit.FolderCreated(user, path);
+                }, "CreateFolder");
+
                 LogSuccess(user);
                 return true;
             }
@@ -104,7 +136,6 @@ namespace Server
                 throw new FaultException("Error while creating folder.");
             }
         }
-
         public bool Delete(string path)
         {
             string user = GetCurrentUser();
@@ -118,18 +149,26 @@ namespace Server
 
             try
             {
-                if (File.Exists(path))
+                return PerformAsEditor(() =>
                 {
-                    File.Delete(path);
-                }
-                else if (Directory.Exists(path))
-                {
-                    Directory.Delete(path, true);
-                }
-                else
-                {
-                    throw new FileNotFoundException("File or folder not found.");
-                }
+                    bool isFile = File.Exists(path);
+                    bool isDirectory = Directory.Exists(path);
+
+                    if (isFile)
+                    {
+                        File.Delete(path);
+                        Audit.FileDeleted(user, path);
+                    }
+                    else if (isDirectory)
+                    {
+                        Directory.Delete(path, true);
+                        Audit.FolderDeleted(user, path);
+                    }
+                    else
+                    {
+                        throw new FileNotFoundException("File or folder not found.");
+                    }
+                }, "Delete");
 
                 LogSuccess(user);
                 return true;
@@ -140,7 +179,6 @@ namespace Server
                 throw new FaultException("Error while deleting.");
             }
         }
-
         public bool MoveTo(string sourcePath, string destinationPath)
         {
             string user = GetCurrentUser();
@@ -154,18 +192,26 @@ namespace Server
 
             try
             {
-                if (File.Exists(sourcePath))
+                return PerformAsEditor(() =>
                 {
-                    File.Move(sourcePath, destinationPath);
-                }
-                else if (Directory.Exists(sourcePath))
-                {
-                    Directory.Move(sourcePath, destinationPath);
-                }
-                else
-                {
-                    throw new FileNotFoundException("Source path does not exist.");
-                }
+                    bool isFile = File.Exists(sourcePath);
+                    bool isDirectory = Directory.Exists(sourcePath);
+
+                    if (isFile)
+                    {
+                        File.Move(sourcePath, destinationPath);
+                        Audit.FileMoved(user, sourcePath, destinationPath);
+                    }
+                    else if (isDirectory)
+                    {
+                        Directory.Move(sourcePath, destinationPath);
+                        Audit.FolderMoved(user, sourcePath, destinationPath);
+                    }
+                    else
+                    {
+                        throw new FileNotFoundException("Source path does not exist.");
+                    }
+                }, "MoveTo");
 
                 LogSuccess(user);
                 return true;
