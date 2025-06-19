@@ -153,7 +153,6 @@ namespace SecurityManager
 				throw new ArgumentException("Error while trying to write file move event to event log.");
 			}
 		}
-
 		public static void FolderMoved(string userName, string sourcePath, string destinationPath)
 		{
 			if (customLog != null)
@@ -164,6 +163,32 @@ namespace SecurityManager
 			else
 			{
 				throw new ArgumentException("Error while trying to write folder move event to event log.");
+			}
+		}
+
+		public static void FileAccessed(string userName, string filePath)
+		{
+			if (customLog != null)
+			{
+				string message = $"User {userName} accessed file {filePath}";
+				customLog.WriteEntry(message);
+			}
+			else
+			{
+				throw new ArgumentException("Error while trying to write file access event to event log.");
+			}
+		}
+
+		public static void FolderAccessed(string userName, string folderPath)
+		{
+			if (customLog != null)
+			{
+				string message = $"User {userName} accessed folder {folderPath}";
+				customLog.WriteEntry(message);
+			}
+			else
+			{
+				throw new ArgumentException("Error while trying to write folder access event to event log.");
 			}
 		}
 

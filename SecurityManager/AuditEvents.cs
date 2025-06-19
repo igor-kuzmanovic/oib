@@ -18,7 +18,9 @@ namespace SecurityManager
 		FileDeleted = 5,
 		FolderDeleted = 6,
 		FileMoved = 7,
-		FolderMoved = 8
+		FolderMoved = 8,
+		FileAccessed = 9,
+		FolderAccessed = 10
 	}
 
 	public class AuditEvents
@@ -106,12 +108,26 @@ namespace SecurityManager
 				return ResourceMgr.GetString(AuditEventTypes.FileMoved.ToString());
 			}
 		}
-
 		public static string FolderMoved
 		{
 			get
 			{
 				return ResourceMgr.GetString(AuditEventTypes.FolderMoved.ToString());
+			}
+		}
+		public static string FileAccessed
+		{
+			get
+			{
+				return ResourceMgr.GetString(AuditEventTypes.FileAccessed.ToString());
+			}
+		}
+
+		public static string FolderAccessed
+		{
+			get
+			{
+				return ResourceMgr.GetString(AuditEventTypes.FolderAccessed.ToString());
 			}
 		}
 	}

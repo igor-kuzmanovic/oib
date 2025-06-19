@@ -81,7 +81,7 @@ namespace Server
 
             try
             {
-                return PerformAsEditor(() =>
+                bool result = PerformAsEditor(() =>
                 {
                     using (Aes aes = Aes.Create())
                     {
@@ -97,10 +97,10 @@ namespace Server
                     }
 
                     Audit.FileCreated(user, path);
+                    LogSuccess(user);
                 }, "CreateFile");
 
-                LogSuccess(user);
-                return true;
+                return result;
             }
             catch (Exception ex)
             {
@@ -121,14 +121,14 @@ namespace Server
 
             try
             {
-                return PerformAsEditor(() =>
+                bool result = PerformAsEditor(() =>
                 {
                     Directory.CreateDirectory(path);
                     Audit.FolderCreated(user, path);
+                    LogSuccess(user);
                 }, "CreateFolder");
 
-                LogSuccess(user);
-                return true;
+                return result;
             }
             catch (Exception ex)
             {
@@ -149,7 +149,7 @@ namespace Server
 
             try
             {
-                return PerformAsEditor(() =>
+                bool result = PerformAsEditor(() =>
                 {
                     bool isFile = File.Exists(path);
                     bool isDirectory = Directory.Exists(path);
@@ -168,10 +168,10 @@ namespace Server
                     {
                         throw new FileNotFoundException("File or folder not found.");
                     }
+                    LogSuccess(user);
                 }, "Delete");
 
-                LogSuccess(user);
-                return true;
+                return result;
             }
             catch (Exception ex)
             {
@@ -192,7 +192,7 @@ namespace Server
 
             try
             {
-                return PerformAsEditor(() =>
+                bool result = PerformAsEditor(() =>
                 {
                     bool isFile = File.Exists(sourcePath);
                     bool isDirectory = Directory.Exists(sourcePath);
@@ -211,10 +211,10 @@ namespace Server
                     {
                         throw new FileNotFoundException("Source path does not exist.");
                     }
+                    LogSuccess(user);
                 }, "MoveTo");
 
-                LogSuccess(user);
-                return true;
+                return result;
             }
             catch (Exception ex)
             {
@@ -227,7 +227,6 @@ namespace Server
         {
             return MoveTo(sourcePath, destinationPath);
         }
-
         public FileData ReadFile(string path)
         {
             string user = GetCurrentUser();
@@ -241,20 +240,40 @@ namespace Server
 
             try
             {
-                byte[] encryptedData = File.ReadAllBytes(path);
-                byte[] iv = new byte[16]; // AES block size = 16 bytes
-
-                Array.Copy(encryptedData, 0, iv, 0, 16);
-                byte[] cipher = new byte[encryptedData.Length - 16];
-                Array.Copy(encryptedData, 16, cipher, 0, cipher.Length);
-
-                LogSuccess(user);
-
-                return new FileData
+                if (!File.Exists(path))
                 {
-                    InitializationVector = iv,
-                    Content = cipher
-                };
+                    LogFailure(user, $"File not found: {path}");
+                    throw new FileNotFoundException($"File not found: {path}");
+                }
+
+                using (Aes aes = Aes.Create())
+                {
+                    aes.Mode = CipherMode.CBC;
+                    aes.Key = EncryptionHelper.GetSecretKey();
+                    // Generate a new IV for encryption (don't reuse IVs)
+                    aes.GenerateIV();
+
+                    byte[] fileContent = File.ReadAllBytes(path);
+                    byte[] encryptedContent;
+
+                    // Encrypt the file content
+                    using (MemoryStream msEncrypt = new MemoryStream())
+                    using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, aes.CreateEncryptor(), CryptoStreamMode.Write))
+                    {
+                        csEncrypt.Write(fileContent, 0, fileContent.Length);
+                        csEncrypt.FlushFinalBlock();
+                        encryptedContent = msEncrypt.ToArray();
+                    }
+
+                    LogSuccess(user);
+                    Audit.FileAccessed(user, path);
+
+                    return new FileData
+                    {
+                        InitializationVector = aes.IV,
+                        Content = encryptedContent
+                    };
+                }
             }
             catch (Exception ex)
             {
@@ -262,7 +281,6 @@ namespace Server
                 throw new FaultException("Error while reading file.");
             }
         }
-
         public string[] ShowFolderContent(string path)
         {
             string user = GetCurrentUser();
@@ -276,8 +294,15 @@ namespace Server
 
             try
             {
+                if (!Directory.Exists(path))
+                {
+                    LogFailure(user, $"Folder not found: {path}");
+                    throw new DirectoryNotFoundException($"Folder not found: {path}");
+                }
+
                 string[] entries = Directory.GetFileSystemEntries(path);
                 LogSuccess(user);
+                Audit.FolderAccessed(user, path);
                 return entries;
             }
             catch (Exception ex)

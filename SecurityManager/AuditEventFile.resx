@@ -143,5 +143,10 @@
   </data>
   <data name="FolderMoved" xml:space="preserve">
     <value>User {0} moved folder from {1} to {2}.</value>
+  </data>  <data name="FileAccessed" xml:space="preserve">
+    <value>User {0} accessed file {1}.</value>
+  </data>
+  <data name="FolderAccessed" xml:space="preserve">
+    <value>User {0} accessed folder {1}.</value>
   </data>
 </root>
