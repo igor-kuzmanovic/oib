@@ -12,7 +12,13 @@ namespace SecurityManager
 	{
 		AuthenticationSuccess = 0,
 		AuthorizationSuccess = 1,
-		AuthorizationFailed = 2
+		AuthorizationFailed = 2,
+		FileCreated = 3,
+		FolderCreated = 4,
+		FileDeleted = 5,
+		FolderDeleted = 6,
+		FileMoved = 7,
+		FolderMoved = 8
 	}
 
 	public class AuditEvents
@@ -28,9 +34,9 @@ namespace SecurityManager
 				{
 					if (resourceManager == null)
 					{
-                        resourceManager = new ResourceManager
-                            (typeof(AuditEventFile).ToString(),
-                            Assembly.GetExecutingAssembly());
+						resourceManager = new ResourceManager
+							(typeof(AuditEventFile).ToString(),
+							Assembly.GetExecutingAssembly());
 					}
 					return resourceManager;
 				}
@@ -41,7 +47,7 @@ namespace SecurityManager
 		{
 			get
 			{
-                return ResourceMgr.GetString(AuditEventTypes.AuthenticationSuccess.ToString()); 
+				return ResourceMgr.GetString(AuditEventTypes.AuthenticationSuccess.ToString());
 			}
 		}
 
@@ -49,16 +55,64 @@ namespace SecurityManager
 		{
 			get
 			{
-                return ResourceMgr.GetString(AuditEventTypes.AuthorizationSuccess.ToString());
-            }
+				return ResourceMgr.GetString(AuditEventTypes.AuthorizationSuccess.ToString());
+			}
 		}
 
 		public static string AuthorizationFailed
 		{
 			get
 			{
-                return ResourceMgr.GetString(AuditEventTypes.AuthorizationFailed.ToString());
-            }
+				return ResourceMgr.GetString(AuditEventTypes.AuthorizationFailed.ToString());
+			}
+		}
+
+		public static string FileCreated
+		{
+			get
+			{
+				return ResourceMgr.GetString(AuditEventTypes.FileCreated.ToString());
+			}
+		}
+
+		public static string FolderCreated
+		{
+			get
+			{
+				return ResourceMgr.GetString(AuditEventTypes.FolderCreated.ToString());
+			}
+		}
+
+		public static string FileDeleted
+		{
+			get
+			{
+				return ResourceMgr.GetString(AuditEventTypes.FileDeleted.ToString());
+			}
+		}
+
+		public static string FolderDeleted
+		{
+			get
+			{
+				return ResourceMgr.GetString(AuditEventTypes.FolderDeleted.ToString());
+			}
+		}
+
+		public static string FileMoved
+		{
+			get
+			{
+				return ResourceMgr.GetString(AuditEventTypes.FileMoved.ToString());
+			}
+		}
+
+		public static string FolderMoved
+		{
+			get
+			{
+				return ResourceMgr.GetString(AuditEventTypes.FolderMoved.ToString());
+			}
 		}
 	}
 }

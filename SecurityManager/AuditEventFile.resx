@@ -126,4 +126,22 @@
   <data name="AuthorizationSuccess" xml:space="preserve">
     <value>User {0} successfully accessed to {1}.</value>
   </data>
+  <data name="FileCreated" xml:space="preserve">
+    <value>User {0} created file {1}.</value>
+  </data>
+  <data name="FolderCreated" xml:space="preserve">
+    <value>User {0} created folder {1}.</value>
+  </data>
+  <data name="FileDeleted" xml:space="preserve">
+    <value>User {0} deleted file {1}.</value>
+  </data>
+  <data name="FolderDeleted" xml:space="preserve">
+    <value>User {0} deleted folder {1}.</value>
+  </data>
+  <data name="FileMoved" xml:space="preserve">
+    <value>User {0} moved file from {1} to {2}.</value>
+  </data>
+  <data name="FolderMoved" xml:space="preserve">
+    <value>User {0} moved folder from {1} to {2}.</value>
+  </data>
 </root>
