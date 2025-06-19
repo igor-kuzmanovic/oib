@@ -20,7 +20,7 @@ namespace Server
             ServiceHost host = new ServiceHost(typeof(WCFService));
             host.AddServiceEndpoint(typeof(IWCFService), binding, address);
 
-            // podesavamo da se koristi MyAuthorizationManager umesto ugradjenog
+            // podesavamo da se koristi CustomAuthorizationManager umesto ugradjenog
             host.Authorization.ServiceAuthorizationManager = new CustomAuthorizationManager();
 
             // podesavamo custom polisu, odnosno nas objekat principala
