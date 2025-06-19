@@ -78,24 +78,14 @@ namespace Server
                 LogFailure(user, "CreateFile requires Change permission.");
                 throw new FaultException($"User {user} is not authorized for CreateFile.");
             }
-
             try
             {
+                // Use the encryption helper to decrypt content received through secure transmission
+                byte[] decryptedContent = EncryptionHelper.DecryptContent(fileData);
+
                 bool result = PerformAsEditor(() =>
                 {
-                    using (Aes aes = Aes.Create())
-                    {
-                        aes.Mode = CipherMode.CBC;
-                        aes.Key = EncryptionHelper.GetSecretKey(); // Implement securely
-                        aes.IV = fileData.InitializationVector;
-
-                        using (FileStream fs = new FileStream(path, FileMode.Create))
-                        using (CryptoStream cs = new CryptoStream(fs, aes.CreateDecryptor(), CryptoStreamMode.Write))
-                        {
-                            cs.Write(fileData.Content, 0, fileData.Content.Length);
-                        }
-                    }
-
+                    File.WriteAllBytes(path, decryptedContent);
                     Audit.FileCreated(user, path);
                     LogSuccess(user);
                 }, "CreateFile");
@@ -237,7 +227,6 @@ namespace Server
                 LogFailure(user, "ReadFile requires See permission.");
                 throw new FaultException($"User {user} is not authorized for ReadFile.");
             }
-
             try
             {
                 if (!File.Exists(path))
@@ -246,34 +235,15 @@ namespace Server
                     throw new FileNotFoundException($"File not found: {path}");
                 }
 
-                using (Aes aes = Aes.Create())
-                {
-                    aes.Mode = CipherMode.CBC;
-                    aes.Key = EncryptionHelper.GetSecretKey();
-                    // Generate a new IV for encryption (don't reuse IVs)
-                    aes.GenerateIV();
+                byte[] fileContent = File.ReadAllBytes(path);
 
-                    byte[] fileContent = File.ReadAllBytes(path);
-                    byte[] encryptedContent;
+                // Use the encryption helper to encrypt content for secure transmission
+                FileData encryptedData = EncryptionHelper.EncryptContent(fileContent);
 
-                    // Encrypt the file content
-                    using (MemoryStream msEncrypt = new MemoryStream())
-                    using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, aes.CreateEncryptor(), CryptoStreamMode.Write))
-                    {
-                        csEncrypt.Write(fileContent, 0, fileContent.Length);
-                        csEncrypt.FlushFinalBlock();
-                        encryptedContent = msEncrypt.ToArray();
-                    }
+                LogSuccess(user);
+                Audit.FileAccessed(user, path);
 
-                    LogSuccess(user);
-                    Audit.FileAccessed(user, path);
-
-                    return new FileData
-                    {
-                        InitializationVector = aes.IV,
-                        Content = encryptedContent
-                    };
-                }
+                return encryptedData;
             }
             catch (Exception ex)
             {

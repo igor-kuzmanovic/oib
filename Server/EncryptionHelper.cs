@@ -2,47 +2,78 @@
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using Contracts;
 
 namespace Server
 {
     public static class EncryptionHelper
     {
-        private static readonly string KeyFileName = "aes_key.bin";
-        private static readonly byte[] DefaultKey = Encoding.UTF8.GetBytes("12345678901234567890123456789012"); // 32 bytes = 256-bit key
+        private const int KEY_SIZE = 256;
+        private const int BLOCK_SIZE = 128;
 
         public static byte[] GetSecretKey()
         {
-            string keyPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, KeyFileName);
+            string keyString = EncryptionConfigFile.EncryptionKey;
+            byte[] key = Encoding.UTF8.GetBytes(keyString);
 
-            // If key file doesn't exist, generate and save a new key
-            if (!File.Exists(keyPath))
+            if (key.Length != KEY_SIZE / 8)
             {
-                try
+                using (SHA256 sha = SHA256.Create())
                 {
-                    using (Aes aes = Aes.Create())
-                    {
-                        aes.KeySize = 256;
-                        aes.GenerateKey();
-                        File.WriteAllBytes(keyPath, aes.Key);
-                        return aes.Key;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error generating key: {ex.Message}. Using default key.");
-                    return DefaultKey;
+                    key = sha.ComputeHash(key);
                 }
             }
 
-            try
+            return key;
+        }
+
+        public static FileData EncryptContent(byte[] content)
+        {
+            using (Aes aes = Aes.Create())
             {
-                // Read existing key
-                return File.ReadAllBytes(keyPath);
+                aes.Mode = CipherMode.CBC;
+                aes.Padding = PaddingMode.PKCS7;
+                aes.Key = GetSecretKey();
+                aes.BlockSize = BLOCK_SIZE;
+                aes.KeySize = KEY_SIZE;
+                aes.GenerateIV();
+
+                byte[] encryptedContent;
+
+                using (MemoryStream msEncrypt = new MemoryStream())
+                using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, aes.CreateEncryptor(), CryptoStreamMode.Write))
+                {
+                    csEncrypt.Write(content, 0, content.Length);
+                    csEncrypt.FlushFinalBlock();
+                    encryptedContent = msEncrypt.ToArray();
+                }
+
+                return new FileData
+                {
+                    InitializationVector = aes.IV,
+                    Content = encryptedContent
+                };
             }
-            catch (Exception ex)
+        }
+
+        public static byte[] DecryptContent(FileData fileData)
+        {
+            using (Aes aes = Aes.Create())
             {
-                Console.WriteLine($"Error reading key: {ex.Message}. Using default key.");
-                return DefaultKey;
+                aes.Mode = CipherMode.CBC;
+                aes.Padding = PaddingMode.PKCS7;
+                aes.Key = GetSecretKey();
+                aes.IV = fileData.InitializationVector;
+                aes.BlockSize = BLOCK_SIZE;
+                aes.KeySize = KEY_SIZE;
+
+                using (MemoryStream msDecrypt = new MemoryStream())
+                using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, aes.CreateDecryptor(), CryptoStreamMode.Write))
+                {
+                    csDecrypt.Write(fileData.Content, 0, fileData.Content.Length);
+                    csDecrypt.FlushFinalBlock();
+                    return msDecrypt.ToArray();
+                }
             }
         }
     }
