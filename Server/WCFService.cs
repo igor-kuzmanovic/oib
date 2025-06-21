@@ -4,8 +4,7 @@ using System.ServiceModel;
 
 namespace Server
 {
-    [ServiceBehavior(IncludeExceptionDetailInFaults = true,
-                     ImpersonateCallerForAllOperations = false)]
+    [ServiceBehavior(IncludeExceptionDetailInFaults = true)]
     public class WCFService : IWCFService
     {
         private readonly FileService _fileService = new FileService();

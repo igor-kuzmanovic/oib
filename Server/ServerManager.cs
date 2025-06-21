@@ -20,13 +20,12 @@ namespace Server
         Primary,
         Backup
     }
-
     public class ServerManager
     {
         public static readonly string PrimaryServerAddress = "net.tcp://localhost:9999/WCFService";
         public static readonly string BackupServerAddress = "net.tcp://localhost:8888/WCFService";
         public static readonly string DataDirectory = Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory, "FileServerData");
+            AppDomain.CurrentDomain.BaseDirectory, "..", "Files");
 
         private static bool isPrimaryServer = false;
         private readonly object lockObject = new object();
@@ -245,7 +244,6 @@ namespace Server
                 host.Description.Behaviors.Add(serviceBehavior);
             }
 
-            serviceBehavior.ImpersonateCallerForAllOperations = false;
             serviceBehavior.IncludeExceptionDetailInFaults = true;
         }
 
