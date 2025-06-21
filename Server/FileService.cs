@@ -90,10 +90,11 @@ namespace Server
                     throw new FaultException("Only .txt files are supported.");
                 }
 
-                // Resolve the path to ensure it's in the data directory
-                string resolvedPath = ResolvePath(path); byte[] decryptedContent = EncryptionHelper.DecryptContent(fileData);
+                string resolvedPath = ResolvePath(path);
+                byte[] decryptedContent = EncryptionHelper.DecryptContent(fileData);
 
-                bool result = PerformAsEditor(() =>
+                var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+                using (var context = identity.Impersonate())
                 {
                     string directory = Path.GetDirectoryName(resolvedPath);
                     if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
@@ -101,12 +102,11 @@ namespace Server
                         Directory.CreateDirectory(directory);
                     }
                     File.WriteAllBytes(resolvedPath, decryptedContent);
-                    string serverAddress = GetServerAddress();
-                    Audit.FileCreated(user, path, serverAddress);
-                    LogSuccess(user);
-                }, "CreateFile");
-
-                return result;
+                }
+                string serverAddress = GetServerAddress();
+                Audit.FileCreated(user, path, serverAddress);
+                LogSuccess(user);
+                return true;
             }
             catch (Exception ex)
             {
@@ -127,18 +127,17 @@ namespace Server
 
             try
             {
-                // Resolve the path to ensure it's in the data directory
                 string resolvedPath = ResolvePath(path);
 
-                bool result = PerformAsEditor(() =>
+                var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+                using (var context = identity.Impersonate())
                 {
                     Directory.CreateDirectory(resolvedPath);
-                    string serverAddress = GetServerAddress();
-                    Audit.FolderCreated(user, path, serverAddress);
-                    LogSuccess(user);
-                }, "CreateFolder");
-
-                return result;
+                }
+                string serverAddress = GetServerAddress();
+                Audit.FolderCreated(user, path, serverAddress);
+                LogSuccess(user);
+                return true;
             }
             catch (Exception ex)
             {
@@ -159,13 +158,14 @@ namespace Server
 
             try
             {
-                // Resolve the path to ensure it's in the data directory
                 string resolvedPath = ResolvePath(path);
 
-                bool result = PerformAsEditor(() =>
+                var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+                using (var context = identity.Impersonate())
                 {
                     bool isFile = File.Exists(resolvedPath);
-                    bool isDirectory = Directory.Exists(resolvedPath); if (isFile)
+                    bool isDirectory = Directory.Exists(resolvedPath);
+                    if (isFile)
                     {
                         File.Delete(resolvedPath);
                         string serverAddress = GetServerAddress();
@@ -181,10 +181,9 @@ namespace Server
                     {
                         throw new FaultException("File or folder not found.");
                     }
-                    LogSuccess(user);
-                }, "Delete");
-
-                return result;
+                }
+                LogSuccess(user);
+                return true;
             }
             catch (Exception ex)
             {
@@ -205,14 +204,15 @@ namespace Server
 
             try
             {
-                // Resolve both paths to ensure they're in the data directory
                 string resolvedSourcePath = ResolvePath(sourcePath);
                 string resolvedDestinationPath = ResolvePath(destinationPath);
 
-                bool result = PerformAsEditor(() =>
+                var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+                using (var context = identity.Impersonate())
                 {
                     bool isFile = File.Exists(resolvedSourcePath);
-                    bool isDirectory = Directory.Exists(resolvedSourcePath); if (isFile)
+                    bool isDirectory = Directory.Exists(resolvedSourcePath);
+                    if (isFile)
                     {
                         File.Move(resolvedSourcePath, resolvedDestinationPath);
                         string serverAddress = GetServerAddress();
@@ -228,10 +228,9 @@ namespace Server
                     {
                         throw new FaultException("Source file or folder not found.");
                     }
-                    LogSuccess(user);
-                }, "MoveTo");
-
-                return result;
+                }
+                LogSuccess(user);
+                return true;
             }
             catch (Exception ex)
             {
