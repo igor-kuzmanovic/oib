@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -10,8 +11,22 @@ namespace SecurityManager
     {
 
         private static EventLog customLog = null;
-        const string SourceName = "SecurityManager.Audit";
-        const string LogName = "FileServerAuditLog";
+        private static readonly string SourceName = GetConfigValue("AuditSourceName", "SecurityManager.Audit");
+        private static readonly string LogName = GetConfigValue("AuditLogName", "FileServerAuditLog");
+
+        private static string GetConfigValue(string key, string defaultValue)
+        {
+            try
+            {
+                string value = ConfigurationManager.AppSettings[key];
+                if (!string.IsNullOrEmpty(value))
+                {
+                    return value;
+                }
+            }
+            catch { }
+            return defaultValue;
+        }
 
         static Audit()
         {

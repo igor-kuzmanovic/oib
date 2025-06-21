@@ -12,6 +12,7 @@ using System.ServiceModel.Security;
 using System.IO;
 using System.Threading;
 using System.Diagnostics;
+using System.Configuration;
 
 namespace Server
 {
@@ -22,10 +23,10 @@ namespace Server
     }
     public class ServerManager
     {
-        public static readonly string PrimaryServerAddress = "net.tcp://localhost:9999/WCFService";
-        public static readonly string BackupServerAddress = "net.tcp://localhost:8888/WCFService";
-        public static readonly string DataDirectory = Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory, "..", "Files");
+        public static readonly string PrimaryServerAddress = GetConfigValue("PrimaryServerAddress", "net.tcp://localhost:9999/WCFService");
+        public static readonly string BackupServerAddress = GetConfigValue("BackupServerAddress", "net.tcp://localhost:8888/WCFService");
+
+        public static readonly string DataDirectory = GetDataDirectoryFromConfig();
 
         private static bool isPrimaryServer = false;
         private readonly object lockObject = new object();
@@ -54,12 +55,9 @@ namespace Server
                 StartAsPrimary();
             }
         }
-
         private void DisplayStorageLocations()
         {
-            Console.WriteLine("File Storage Location:");
-            Console.WriteLine($"  Files Directory: {DataDirectory}");
-            Console.WriteLine();
+            Console.WriteLine($"Files Directory: {DataDirectory}");
         }
 
         public void StartAsBackup()
@@ -262,6 +260,52 @@ namespace Server
                     Console.WriteLine("Server aborted due to error during close.");
                 }
             }
+        }
+
+        // Helper method to get DataDirectory from App.config
+        private static string GetDataDirectoryFromConfig()
+        {
+            try
+            {
+                string configPath = ConfigurationManager.AppSettings["DataDirectory"];
+                if (!string.IsNullOrEmpty(configPath))
+                {
+                    Console.WriteLine($"Found DataDirectory in App.config: {configPath}");
+                    return configPath;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error reading DataDirectory from App.config: {ex.Message}");
+            }
+
+            // Fallback to default location
+            string defaultPath = Path.Combine(
+                Path.GetDirectoryName(Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory)),
+                "Files");
+            Console.WriteLine($"Using default DataDirectory: {defaultPath}");
+            return defaultPath;
+        }
+
+        // Helper method to get any config value with a default fallback
+        private static string GetConfigValue(string key, string defaultValue)
+        {
+            try
+            {
+                string value = ConfigurationManager.AppSettings[key];
+                if (!string.IsNullOrEmpty(value))
+                {
+                    Console.WriteLine($"Found {key} in App.config: {value}");
+                    return value;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error reading {key} from App.config: {ex.Message}");
+            }
+
+            Console.WriteLine($"Using default {key}: {defaultValue}");
+            return defaultValue;
         }
     }
 }

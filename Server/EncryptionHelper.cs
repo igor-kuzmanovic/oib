@@ -2,6 +2,7 @@
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using System.Configuration;
 using Contracts;
 
 namespace Server
@@ -13,7 +14,7 @@ namespace Server
 
         public static byte[] GetSecretKey()
         {
-            string keyString = EncryptionConfigFile.EncryptionKey;
+            string keyString = GetEncryptionKey();
             byte[] key = Encoding.UTF8.GetBytes(keyString);
 
             if (key.Length != KEY_SIZE / 8)
@@ -25,6 +26,27 @@ namespace Server
             }
 
             return key;
+        }
+
+        private static string GetEncryptionKey()
+        {
+            string defaultKey = "12345678901234567890123456789012";
+            try
+            {
+                string key = ConfigurationManager.AppSettings["EncryptionKey"];
+                if (!string.IsNullOrEmpty(key))
+                {
+                    Console.WriteLine("Using EncryptionKey from App.config");
+                    return key;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error reading EncryptionKey from App.config: {ex.Message}");
+            }
+
+            Console.WriteLine("Using default EncryptionKey");
+            return defaultKey;
         }
 
         public static FileData EncryptContent(byte[] content)

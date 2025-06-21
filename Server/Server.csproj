@@ -34,6 +34,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Configuration.ConfigurationManager, Version=9.0.0.6, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Configuration.ConfigurationManager.9.0.6\lib\net462\System.Configuration.ConfigurationManager.dll</HintPath>
+    </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.IdentityModel" />
     <Reference Include="System.ServiceModel" />
@@ -45,11 +49,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="EncryptionConfigFile.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>EncryptionConfigFile.resx</DependentUpon>
-    </Compile>
     <Compile Include="EncryptionHelper.cs" />
     <Compile Include="FileService.cs" />
     <Compile Include="Program.cs" />
@@ -59,13 +58,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="GenerateBackupCertificate.ps1" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="EncryptionConfigFile.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>EncryptionConfigFile.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Contracts\Contracts.csproj">
