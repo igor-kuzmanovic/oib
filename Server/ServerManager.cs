@@ -20,6 +20,7 @@ namespace Server
         Primary,
         Backup
     }
+
     public class ServerManager
     {
         public static readonly string PrimaryServerAddress = "net.tcp://localhost:9999/WCFService";
@@ -35,9 +36,11 @@ namespace Server
         {
             return isPrimaryServer;
         }
+
         public void StartServer()
         {
-            Console.WriteLine("Starting File Server..."); DisplayStorageLocations();
+            Console.WriteLine("Starting File Server...");
+            DisplayStorageLocations();
 
             Directory.CreateDirectory(DataDirectory);
 
@@ -52,12 +55,14 @@ namespace Server
                 StartAsPrimary();
             }
         }
+
         private void DisplayStorageLocations()
         {
             Console.WriteLine("File Storage Location:");
             Console.WriteLine($"  Files Directory: {DataDirectory}");
             Console.WriteLine();
         }
+
         public void StartAsBackup()
         {
             StartBackupServer();
@@ -78,7 +83,6 @@ namespace Server
             CleanupServer();
         }
 
-        // Server operations
         private void StartPrimaryServer()
         {
             try
@@ -86,15 +90,14 @@ namespace Server
                 CloseExistingHost();
 
                 NetTcpBinding binding = new NetTcpBinding();
+                binding.Security.Mode = SecurityMode.Transport;
+                binding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Windows;
+                binding.Security.Transport.ProtectionLevel = System.Net.Security.ProtectionLevel.EncryptAndSign;
 
-                // Create the service host
                 serviceHost = new ServiceHost(typeof(WCFService));
-
-                // Add the service endpoint with the primary address
                 serviceHost.AddServiceEndpoint(typeof(IWCFService), binding, PrimaryServerAddress);
+                ConfigureCustomAuthorization(serviceHost);
 
-                // Set up custom authorization
-                ConfigureCustomAuthorization(serviceHost);                // Open the service host
                 serviceHost.Open();
                 isPrimaryServer = true;
 
@@ -114,30 +117,22 @@ namespace Server
                 CloseExistingHost();
 
                 NetTcpBinding binding = new NetTcpBinding();
-
-                // Configure the backup server with certificate security
                 binding.Security.Mode = SecurityMode.TransportWithMessageCredential;
                 binding.Security.Message.ClientCredentialType = MessageCredentialType.Windows;
                 binding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Certificate;
 
-                // Create the service host
                 serviceHost = new ServiceHost(typeof(WCFService));
-
-                // Add the service endpoint with the backup address
                 serviceHost.AddServiceEndpoint(typeof(IWCFService), binding, BackupServerAddress);
 
-                // Configure the certificate
                 serviceHost.Credentials.ServiceCertificate.SetCertificate(
                     StoreLocation.LocalMachine,
                     StoreName.My,
                     X509FindType.FindBySubjectName,
                     "FileServerBackup");
 
-                // Set up custom authorization
                 ConfigureCustomAuthorization(serviceHost);
-
-                // Open the service host
-                serviceHost.Open(); isPrimaryServer = false;
+                serviceHost.Open();
+                isPrimaryServer = false;
 
                 Console.WriteLine($"Backup server started on {BackupServerAddress}");
                 Audit.BackupServerStarted(BackupServerAddress);
@@ -149,14 +144,12 @@ namespace Server
             }
         }
 
-        // Helper methods
         public static bool IsPrimaryServerRunning()
         {
             try
             {
-                // Try to connect to the primary server
                 NetTcpBinding binding = new NetTcpBinding();
-                binding.OpenTimeout = TimeSpan.FromSeconds(2); // Short timeout for check
+                binding.OpenTimeout = TimeSpan.FromSeconds(2);
 
                 ChannelFactory<IWCFService> factory = null;
                 IWCFService channel = null;
@@ -166,24 +159,18 @@ namespace Server
                     factory = new ChannelFactory<IWCFService>(binding, new EndpointAddress(PrimaryServerAddress));
                     channel = factory.CreateChannel();
 
-                    // Try a simple operation
                     using (new OperationContextScope((IClientChannel)channel))
                     {
-                        // Just try to connect
                         ((ICommunicationObject)channel).Open();
-
-                        // If we reach here, primary is responsive
                         return true;
                     }
                 }
                 catch (Exception)
                 {
-                    // Primary is not responsive or not running
                     return false;
                 }
                 finally
                 {
-                    // Clean up
                     if (channel != null)
                     {
                         try
@@ -231,6 +218,7 @@ namespace Server
                 serviceHost = null;
             }
         }
+
         private void ConfigureCustomAuthorization(ServiceHost host)
         {
             host.Authorization.ServiceAuthorizationManager = new CustomAuthorizationManager();
@@ -260,6 +248,7 @@ namespace Server
             serviceBehavior.ImpersonateCallerForAllOperations = false;
             serviceBehavior.IncludeExceptionDetailInFaults = true;
         }
+
         private void CleanupServer()
         {
             if (serviceHost != null && serviceHost.State == CommunicationState.Opened)

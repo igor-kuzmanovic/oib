@@ -14,6 +14,8 @@ namespace SecurityManager
             CustomPrincipal principal = operationContext.ServiceSecurityContext.
                 AuthorizationContext.Properties["Principal"] as CustomPrincipal;
 
+            System.Threading.Thread.CurrentPrincipal = principal;
+
             bool retValue = principal.IsInRole("Read");
 
             if (!retValue)

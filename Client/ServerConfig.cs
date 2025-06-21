@@ -19,6 +19,10 @@ namespace Client
             binding.OpenTimeout = OpenTimeout;
             binding.SendTimeout = SendTimeout;
             binding.ReceiveTimeout = ReceiveTimeout;
+            binding.Security.Mode = SecurityMode.Transport;
+            binding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Windows;
+            binding.Security.Transport.ProtectionLevel = System.Net.Security.ProtectionLevel.EncryptAndSign;
+
             return binding;
         }
     }

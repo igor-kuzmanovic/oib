@@ -12,7 +12,7 @@ namespace SecurityManager
         WindowsIdentity identity = null;
         public CustomPrincipal(WindowsIdentity windowsIdentity)
         {
-            identity = windowsIdentity;           
+            identity = windowsIdentity;
         }
 
         public IIdentity Identity
@@ -33,10 +33,10 @@ namespace SecurityManager
                     foreach (string permision in permissions)
                     {
                         if (permision.Equals(permission))
-                                return true;
-                    }                    
-                }                
-            }            
+                            return true;
+                    }
+                }
+            }
             return false;
         }
     }

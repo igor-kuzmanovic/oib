@@ -53,11 +53,16 @@ namespace Client
                 throw;
             }
         }
-
         private T TryExecute<T>(Func<T> operation, string operationName)
         {
             try
             {
+                if (factory != null && ((ICommunicationObject)factory).State == CommunicationState.Faulted)
+                {
+                    Console.WriteLine("Communication channel is faulted. Recreating channel...");
+                    RecreateChannel();
+                }
+
                 return operation();
             }
             catch (FaultException<SecurityException> ex)
@@ -79,6 +84,40 @@ namespace Client
             {
                 Console.WriteLine($"Timeout error in '{operationName}': {ex.Message}");
                 return HandleFailover(operation, operationName, ex);
+            }
+        }
+
+        private void RecreateChannel()
+        {
+            try
+            {
+                if (factory != null)
+                {
+                    try
+                    {
+                        ((ICommunicationObject)factory).Abort();
+                    }
+                    catch
+                    {
+                        // Ignore any exceptions during abort
+                    }
+                }
+
+                // Create a new channel using the current endpoint
+                factory = CreateChannel();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error recreating channel: {ex.Message}");
+                // If we failed to recreate the channel, try failover
+                if (usingPrimaryServer)
+                {
+                    SwitchToBackupServer();
+                }
+                else
+                {
+                    SwitchToPrimaryServer();
+                }
             }
         }
 
