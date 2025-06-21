@@ -1,9 +1,11 @@
 ﻿using Contracts;
 using System.Security.Permissions;
-using System.Text;
+using System.ServiceModel;
 
 namespace Server
 {
+    [ServiceBehavior(IncludeExceptionDetailInFaults = true,
+                     ImpersonateCallerForAllOperations = false)]
     public class WCFService : IWCFService
     {
         private readonly FileService _fileService = new FileService();
@@ -20,45 +22,44 @@ namespace Server
             return _fileService.ReadFile(path);
         }
 
+        [OperationBehavior(Impersonation = ImpersonationOption.Required)]
         [PrincipalPermission(SecurityAction.Demand, Role = "Editor")]
         public bool CreateFile(string path, FileData fileData)
         {
             _fileService.CreateFile(path, fileData);
-
             return true;
         }
 
+        [OperationBehavior(Impersonation = ImpersonationOption.Required)]
         [PrincipalPermission(SecurityAction.Demand, Role = "Editor")]
         public bool CreateFolder(string path)
         {
             _fileService.CreateFolder(path);
-
             return true;
         }
 
+        [OperationBehavior(Impersonation = ImpersonationOption.Required)]
         [PrincipalPermission(SecurityAction.Demand, Role = "Editor")]
         public bool Delete(string path)
         {
             _fileService.Delete(path);
-
             return true;
         }
 
+        [OperationBehavior(Impersonation = ImpersonationOption.Required)]
         [PrincipalPermission(SecurityAction.Demand, Role = "Editor")]
         public bool Rename(string sourcePath, string destinationPath)
         {
             _fileService.Rename(sourcePath, destinationPath);
-
             return true;
         }
 
+        [OperationBehavior(Impersonation = ImpersonationOption.Required)]
         [PrincipalPermission(SecurityAction.Demand, Role = "Editor")]
         public bool MoveTo(string sourcePath, string destinationPath)
         {
             _fileService.MoveTo(sourcePath, destinationPath);
-
             return true;
         }
     }
-
 }

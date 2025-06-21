@@ -6,16 +6,28 @@ using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using System.ServiceModel;
 using System.Text;
+using System.Threading;
 
-namespace ClientApp
+namespace Client
 {
     public class WCFClient : ChannelFactory<IWCFService>, IWCFService, IDisposable
     {
-        IWCFService factory;
+        private IWCFService factory;
+        private NetTcpBinding binding;
+        private EndpointAddress primaryAddress;
+        private EndpointAddress backupAddress;
+        private bool usingPrimaryServer = true;
+        private int retryCount = 0;
+        private const int MAX_RETRY_COUNT = 3;
+        private const int RETRY_DELAY_MS = 1000;
 
-        public WCFClient(NetTcpBinding binding, EndpointAddress address) : base(binding, address)
+        public WCFClient(NetTcpBinding binding, EndpointAddress primaryAddress, EndpointAddress backupAddress)
+            : base(binding, primaryAddress)
         {
-            factory = CreateChannel();
+            this.binding = binding;
+            this.primaryAddress = primaryAddress;
+            this.backupAddress = backupAddress;
+            this.factory = CreateChannel();
         }
 
         public void Dispose()
@@ -28,109 +40,229 @@ namespace ClientApp
             Close();
         }
 
-        public string[] ShowFolderContent(string path)
+        private T ExecuteWithFailover<T>(Func<T> operation, string operationName)
         {
             try
+            {
+                retryCount = 0;
+                return TryExecute(operation, operationName);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Fatal error in '{operationName}': {ex.Message}");
+                throw;
+            }
+        }
+
+        private T TryExecute<T>(Func<T> operation, string operationName)
+        {
+            try
+            {
+                return operation();
+            }
+            catch (FaultException<SecurityException> ex)
+            {
+                Console.WriteLine($"Security error in '{operationName}': {ex.Message}");
+                return default;
+            }
+            catch (FaultException ex)
+            {
+                Console.WriteLine($"Fault error in '{operationName}': {ex.Message}");
+                return default;
+            }
+            catch (CommunicationException ex)
+            {
+                Console.WriteLine($"Communication error in '{operationName}': {ex.Message}");
+                return HandleFailover(operation, operationName, ex);
+            }
+            catch (TimeoutException ex)
+            {
+                Console.WriteLine($"Timeout error in '{operationName}': {ex.Message}");
+                return HandleFailover(operation, operationName, ex);
+            }
+        }
+
+        private T HandleFailover<T>(Func<T> operation, string operationName, Exception ex)
+        {
+            retryCount++;
+
+            if (retryCount > MAX_RETRY_COUNT)
+            {
+                Console.WriteLine($"Maximum retry count reached for '{operationName}'. Last error: {ex.Message}");
+                throw new FaultException($"Service unavailable after {MAX_RETRY_COUNT} retries: {ex.Message}");
+            }
+
+            Console.WriteLine($"Connection error in '{operationName}': {ex.Message}. Attempt {retryCount} of {MAX_RETRY_COUNT}");
+
+            // If using primary server, switch to backup
+            if (usingPrimaryServer)
+            {
+                Console.WriteLine("Switching to backup server...");
+                SwitchToBackupServer();
+            }
+            // If already using backup server, try switching back to primary
+            else if (retryCount > 1)
+            {
+                Console.WriteLine("Trying to switch back to primary server...");
+                SwitchToPrimaryServer();
+            }
+
+            // Wait before retry
+            Thread.Sleep(RETRY_DELAY_MS);
+
+            // Retry the operation
+            return TryExecute(operation, operationName);
+        }
+        private void SwitchToPrimaryServer()
+        {
+            try
+            {
+                // Close and dispose of existing connections
+                if (factory != null)
+                {
+                    try
+                    {
+                        ((ICommunicationObject)factory).Close();
+                    }
+                    catch
+                    {
+                        ((ICommunicationObject)factory).Abort();
+                    }
+                }
+
+                try
+                {
+                    Close();
+                }
+                catch
+                {
+                    Abort();
+                }
+
+                // Create a new channel factory and channel
+                ChannelFactory<IWCFService> newFactory = new ChannelFactory<IWCFService>(binding, primaryAddress);
+                factory = newFactory.CreateChannel();
+                usingPrimaryServer = true;
+                Console.WriteLine("Successfully switched to primary server.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to switch to primary server: {ex.Message}");
+            }
+        }
+        private void SwitchToBackupServer()
+        {
+            try
+            {
+                // Close and dispose of existing connections
+                if (factory != null)
+                {
+                    try
+                    {
+                        ((ICommunicationObject)factory).Close();
+                    }
+                    catch
+                    {
+                        ((ICommunicationObject)factory).Abort();
+                    }
+                }
+
+                try
+                {
+                    Close();
+                }
+                catch
+                {
+                    Abort();
+                }
+
+                // Create a new channel factory and channel
+                ChannelFactory<IWCFService> newFactory = new ChannelFactory<IWCFService>(binding, backupAddress);
+                factory = newFactory.CreateChannel();
+                usingPrimaryServer = false;
+                Console.WriteLine("Successfully switched to backup server.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to switch to backup server: {ex.Message}");
+            }
+        }
+
+        public string[] ShowFolderContent(string path)
+        {
+            return ExecuteWithFailover(() =>
             {
                 var result = factory.ShowFolderContent(path);
                 Console.WriteLine("'ShowFolderContent' allowed");
                 return result;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Error while trying to 'ShowFolderContent': {0}", e.Message);
-                return null;
-            }
+            }, "ShowFolderContent");
         }
 
         public FileData ReadFile(string path)
         {
-            try
+            return ExecuteWithFailover(() =>
             {
                 var result = factory.ReadFile(path);
                 Console.WriteLine("'ReadFile' allowed");
                 return result;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Error while trying to 'ReadFile': {0}", e.Message);
-                return null;
-            }
+            }, "ReadFile");
         }
 
         public bool CreateFolder(string path)
         {
-            try
+            return ExecuteWithFailover(() =>
             {
                 var result = factory.CreateFolder(path);
                 Console.WriteLine("'CreateFolder' allowed");
                 return result;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Error while trying to 'CreateFolder': {0}", e.Message);
-                return false;
-            }
+            }, "CreateFolder");
         }
 
         public bool CreateFile(string path, FileData fileData)
         {
-            try
+            return ExecuteWithFailover(() =>
             {
                 var result = factory.CreateFile(path, fileData);
                 Console.WriteLine("'CreateFile' allowed");
                 return result;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Error while trying to 'CreateFile': {0}", e.Message);
-                return false;
-            }
+            }, "CreateFile");
         }
 
         public bool Delete(string path)
         {
-            try
+            return ExecuteWithFailover(() =>
             {
                 var result = factory.Delete(path);
                 Console.WriteLine("'Delete' allowed");
                 return result;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Error while trying to 'Delete': {0}", e.Message);
-                return false;
-            }
+            }, "Delete");
         }
 
         public bool Rename(string sourcePath, string destinationPath)
         {
-            try
+            return ExecuteWithFailover(() =>
             {
                 var result = factory.Rename(sourcePath, destinationPath);
                 Console.WriteLine("'Rename' allowed");
                 return result;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Error while trying to 'Rename': {0}", e.Message);
-                return false;
-            }
+            }, "Rename");
         }
 
         public bool MoveTo(string sourcePath, string destinationPath)
         {
-            try
+            return ExecuteWithFailover(() =>
             {
                 var result = factory.MoveTo(sourcePath, destinationPath);
                 Console.WriteLine("'MoveTo' allowed");
                 return result;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Error while trying to 'MoveTo': {0}", e.Message);
-                return false;
-            }
+            }, "MoveTo");
+        }
+
+        public bool IsConnectedToPrimary => usingPrimaryServer;
+
+        public string GetCurrentServerAddress()
+        {
+            return usingPrimaryServer ? primaryAddress.Uri.ToString() : backupAddress.Uri.ToString();
         }
     }
 }

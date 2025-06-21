@@ -1,6 +1,7 @@
-﻿using ClientApp;
+using Contracts;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using System.ServiceModel;
@@ -13,14 +14,32 @@ namespace Client
     {
         static void Main(string[] args)
         {
-            NetTcpBinding binding = new NetTcpBinding();
-            string address = "net.tcp://localhost:9999/WCFService";
+            NetTcpBinding binding = ServerConfig.GetBinding();
 
-            using (WCFClient proxy = new WCFClient(binding, new EndpointAddress(new Uri(address))))
+            string primaryAddress = ServerConfig.PrimaryServerAddress;
+            string backupAddress = ServerConfig.BackupServerAddress;
+
+            Console.WriteLine("FileServer Client");
+            Console.WriteLine("======================================");
+            Console.WriteLine($"Primary Server: {primaryAddress}");
+            Console.WriteLine($"Backup Server: {backupAddress}");
+
+            try
             {
-                // TODO
+                using (WCFClient proxy = new WCFClient(binding,
+                                                      new EndpointAddress(new Uri(primaryAddress)),
+                                                      new EndpointAddress(new Uri(backupAddress))))
+                {
+                    CommandProcessor commandProcessor = new CommandProcessor(proxy);
+                    commandProcessor.ProcessCommands();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Critical error: {ex.Message}");
             }
 
+            Console.WriteLine("\nPress Enter to exit...");
             Console.ReadLine();
         }
     }

@@ -10,8 +10,8 @@ using System.Threading.Tasks;
 namespace SecurityManager
 {
     public class CustomAuthorizationPolicy : IAuthorizationPolicy
-    {        
-        public CustomAuthorizationPolicy ()
+    {
+        public CustomAuthorizationPolicy()
         {
             Id = Guid.NewGuid().ToString();
         }
@@ -22,7 +22,7 @@ namespace SecurityManager
         }
         public string Id
         {
-            get; 
+            get;
         }
 
         public bool Evaluate(EvaluationContext evaluationContext, ref object state)
@@ -38,25 +38,22 @@ namespace SecurityManager
                 return false;
             }
 
-            WindowsIdentity windowsIdentity = identities[0] as WindowsIdentity;
-
-
-            try
+            WindowsIdentity windowsIdentity = identities[0] as WindowsIdentity; try
             {
-                Audit.AuthenticationSuccess(Formatter.ParseName(windowsIdentity.Name));
-                    
+                Audit.AuthenticationSuccess(Formatter.ParseName(windowsIdentity.Name), "Authentication");
+
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
             }
-            
+
 
             evaluationContext.Properties["Principal"] =
                 new CustomPrincipal(windowsIdentity);
             return true;
         }
 
-       
+
     }
 }
