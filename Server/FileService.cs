@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.ServiceModel;
 using System.Threading;
@@ -57,20 +58,6 @@ namespace Server
                 Console.WriteLine("Audit failure log failed: " + e.Message);
             }
         }
-        private bool PerformAsEditor(Action action, string operationName)
-        {
-            string user = GetCurrentUser();
-            try
-            {
-                action();
-                return true;
-            }
-            catch (Exception ex)
-            {
-                LogFailure(user, $"Error in {operationName}: {ex.Message}");
-                throw new FaultException($"Error during {operationName} operation: {ex.Message}");
-            }
-        }
 
         public bool CreateFile(string path, FileData fileData)
         {
@@ -87,11 +74,17 @@ namespace Server
                 if (!path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
                 {
                     LogFailure(user, "Only .txt files are supported.");
-                    throw new FaultException("Only .txt files are supported.");
+                    throw new FaultException<FileSystemException>(new FileSystemException("Only .txt files are supported."));
                 }
 
-                string resolvedPath = ResolvePath(path);
+                if (fileData == null || fileData.Content == null || fileData.InitializationVector == null)
+                {
+                    LogFailure(user, "CreateFile received null or incomplete FileData.");
+                    throw new FaultException<FileSystemException>(new FileSystemException("FileData or its properties cannot be null."));
+                }
                 byte[] decryptedContent = EncryptionHelper.DecryptContent(fileData);
+
+                string resolvedPath = ResolvePath(path);
 
                 var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
                 using (var context = identity.Impersonate())
@@ -111,7 +104,7 @@ namespace Server
             catch (Exception ex)
             {
                 LogFailure(user, $"Exception in CreateFile: {ex.Message}");
-                throw new FaultException("Error while creating file.");
+                throw new FaultException<FileSystemException>(new FileSystemException($"Error while creating file: {ex.Message}"));
             }
         }
         public bool CreateFolder(string path)
@@ -142,7 +135,7 @@ namespace Server
             catch (Exception ex)
             {
                 LogFailure(user, $"Exception in CreateFolder: {ex.Message}");
-                throw new FaultException("Error while creating folder.");
+                throw new FaultException<FileSystemException>(new FileSystemException($"Error while creating folder: {ex.Message}"));
             }
         }
         public bool Delete(string path)
@@ -179,7 +172,7 @@ namespace Server
                     }
                     else
                     {
-                        throw new FaultException("File or folder not found.");
+                        throw new FaultException<FileSystemException>(new FileSystemException($"Path not found: {path}"));
                     }
                 }
                 LogSuccess(user);
@@ -188,7 +181,7 @@ namespace Server
             catch (Exception ex)
             {
                 LogFailure(user, $"Exception in Delete: {ex.Message}");
-                throw new FaultException("Error while deleting.");
+                throw new FaultException<FileSystemException>(new FileSystemException($"Error while deleting: {ex.Message}"));
             }
         }
         public bool MoveTo(string sourcePath, string destinationPath)
@@ -214,19 +207,31 @@ namespace Server
                     bool isDirectory = Directory.Exists(resolvedSourcePath);
                     if (isFile)
                     {
+                        // Ensure destination directory exists
+                        string destDir = Path.GetDirectoryName(resolvedDestinationPath);
+                        if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
+                        {
+                            Directory.CreateDirectory(destDir);
+                        }
                         File.Move(resolvedSourcePath, resolvedDestinationPath);
                         string serverAddress = GetServerAddress();
                         Audit.FileMoved(user, sourcePath, destinationPath, serverAddress);
                     }
                     else if (isDirectory)
                     {
+                        // Ensure parent directory of destination exists
+                        string destDir = Path.GetDirectoryName(resolvedDestinationPath);
+                        if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
+                        {
+                            Directory.CreateDirectory(destDir);
+                        }
                         Directory.Move(resolvedSourcePath, resolvedDestinationPath);
                         string serverAddress = GetServerAddress();
                         Audit.FolderMoved(user, sourcePath, destinationPath, serverAddress);
                     }
                     else
                     {
-                        throw new FaultException("Source file or folder not found.");
+                        throw new FaultException<FileSystemException>(new FileSystemException($"Source file or folder not found: {sourcePath}"));
                     }
                 }
                 LogSuccess(user);
@@ -235,7 +240,7 @@ namespace Server
             catch (Exception ex)
             {
                 LogFailure(user, $"Exception in MoveTo: {ex.Message}");
-                throw new FaultException("Error while moving.");
+                throw new FaultException<FileSystemException>(new FileSystemException($"Error while moving: {ex.Message}"));
             }
         }
 
@@ -259,7 +264,7 @@ namespace Server
                 if (!path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
                 {
                     LogFailure(user, "Only .txt files are supported.");
-                    throw new FaultException("Only .txt files are supported.");
+                    throw new FaultException<FileSystemException>(new FileSystemException("Only .txt files are supported."));
                 }
 
                 // Resolve the path to ensure it's in the data directory
@@ -268,7 +273,7 @@ namespace Server
                 if (!File.Exists(resolvedPath))
                 {
                     LogFailure(user, $"File not found: {path}");
-                    throw new FileNotFoundException($"File not found: {path}");
+                    throw new FaultException<FileSystemException>(new FileSystemException($"File not found: {path}"));
                 }
 
                 byte[] fileContent = File.ReadAllBytes(resolvedPath); FileData encryptedData = EncryptionHelper.EncryptContent(fileContent);
@@ -282,7 +287,7 @@ namespace Server
             catch (Exception ex)
             {
                 LogFailure(user, $"Exception in ReadFile: {ex.Message}");
-                throw new FaultException("Error while reading file.");
+                throw new FaultException<FileSystemException>(new FileSystemException($"Error while reading file: {ex.Message}"));
             }
         }
 
@@ -305,9 +310,13 @@ namespace Server
                 if (!Directory.Exists(resolvedPath))
                 {
                     LogFailure(user, $"Folder not found: {path}");
-                    throw new FaultException($"Folder not found: {path}");
+                    throw new FaultException<FileSystemException>(new FileSystemException($"Folder not found: {path}"));
                 }
-                string[] entries = Directory.GetFileSystemEntries(resolvedPath);
+                // Only list directories and .txt files
+                var entries = Directory.GetFileSystemEntries(resolvedPath)
+                    .Where(entry => Directory.Exists(entry) || (File.Exists(entry) && entry.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)))
+                    .ToArray();
+
                 LogSuccess(user);
                 string serverAddress = GetServerAddress();
                 Audit.FolderAccessed(user, path, serverAddress);
@@ -316,7 +325,7 @@ namespace Server
             catch (Exception ex)
             {
                 LogFailure(user, $"Exception in ShowFolderContent: {ex.Message}");
-                throw new FaultException("Error while listing folder content.");
+                throw new FaultException<FileSystemException>(new FileSystemException($"Error while showing folder content: {ex.Message}"));
             }
         }
 
@@ -330,7 +339,7 @@ namespace Server
             // Ensure the path is within the data directory
             if (!safePath.StartsWith(ServerManager.DataDirectory))
             {
-                throw new FaultException("Access to paths outside the data directory is not allowed.");
+                throw new FaultException<FileSystemException>(new FileSystemException("Access to paths outside the data directory is not allowed."));
             }
 
             return safePath;

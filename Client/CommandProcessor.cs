@@ -131,11 +131,13 @@ namespace Client
             }
 
             FileData fileData = proxy.ReadFile(filePath);
-            if (fileData != null && fileData.Content != null)
+            if (fileData != null && fileData.Content != null && fileData.InitializationVector != null)
             {
+                // Decrypt content after receiving from server
+                byte[] decryptedContent = Contracts.EncryptionHelper.DecryptContent(fileData);
                 Console.WriteLine($"\nFile '{filePath}' content:");
                 Console.WriteLine("-------------------------------------------");
-                string textContent = Encoding.UTF8.GetString(fileData.Content);
+                string textContent = Encoding.UTF8.GetString(decryptedContent);
                 Console.WriteLine(textContent);
                 Console.WriteLine("-------------------------------------------");
             }
@@ -164,9 +166,15 @@ namespace Client
             }
 
             Console.Write("Enter text content: ");
-            string content = Console.ReadLine(); byte[] contentBytes = Encoding.UTF8.GetBytes(content);
-            FileData newFileData = new FileData();
-            newFileData.Content = contentBytes;
+            string content = Console.ReadLine();
+            byte[] contentBytes = Encoding.UTF8.GetBytes(content);
+
+            // Encrypt content before sending to server
+            FileData newFileData = Contracts.EncryptionHelper.EncryptContent(contentBytes);
+
+            // Add client-side logs
+            Console.WriteLine("Client: FileData.Content length: " + newFileData.Content?.Length);
+            Console.WriteLine("Client: FileData.InitializationVector length: " + newFileData.InitializationVector?.Length);
 
             bool fileCreated = proxy.CreateFile(newFilePath, newFileData);
             Console.WriteLine($"\nFile creation {(fileCreated ? "successful" : "failed")}.");

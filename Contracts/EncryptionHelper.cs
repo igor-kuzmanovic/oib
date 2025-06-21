@@ -3,9 +3,8 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Configuration;
-using Contracts;
 
-namespace Server
+namespace Contracts
 {
     public static class EncryptionHelper
     {
@@ -25,6 +24,7 @@ namespace Server
                 }
             }
 
+            Console.WriteLine("Encryption key length: " + key.Length);
             return key;
         }
 
@@ -36,7 +36,7 @@ namespace Server
                 string key = ConfigurationManager.AppSettings["EncryptionKey"];
                 if (!string.IsNullOrEmpty(key))
                 {
-                    Console.WriteLine("Using EncryptionKey from App.config");
+                    Console.WriteLine("Using EncryptionKey from App.config: " + GetKeyPreview(key));
                     return key;
                 }
             }
@@ -45,8 +45,18 @@ namespace Server
                 Console.WriteLine($"Error reading EncryptionKey from App.config: {ex.Message}");
             }
 
-            Console.WriteLine("Using default EncryptionKey");
+            Console.WriteLine("Using default EncryptionKey: " + GetKeyPreview(defaultKey));
             return defaultKey;
+        }
+
+        // Helper for safe preview
+        private static string GetKeyPreview(string key)
+        {
+            using (var sha = System.Security.Cryptography.SHA256.Create())
+            {
+                var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(key));
+                return BitConverter.ToString(hash).Replace("-", "").Substring(0, 8) + "...";
+            }
         }
 
         public static FileData EncryptContent(byte[] content)
@@ -59,6 +69,7 @@ namespace Server
                 aes.BlockSize = BLOCK_SIZE;
                 aes.KeySize = KEY_SIZE;
                 aes.GenerateIV();
+                Console.WriteLine("Encrypting content. IV: " + BitConverter.ToString(aes.IV));
 
                 byte[] encryptedContent;
 
@@ -88,6 +99,10 @@ namespace Server
                 aes.IV = fileData.InitializationVector;
                 aes.BlockSize = BLOCK_SIZE;
                 aes.KeySize = KEY_SIZE;
+
+                Console.WriteLine("Decrypting content. IV: " + BitConverter.ToString(fileData.InitializationVector));
+                Console.WriteLine("FileData.Content length: " + fileData.Content?.Length);
+                Console.WriteLine("FileData.InitializationVector length: " + fileData.InitializationVector?.Length);
 
                 using (MemoryStream msDecrypt = new MemoryStream())
                 using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, aes.CreateDecryptor(), CryptoStreamMode.Write))
