@@ -125,7 +125,7 @@ namespace Server
                     StoreLocation.LocalMachine,
                     StoreName.My,
                     X509FindType.FindBySubjectName,
-                    "FileServerBackup");
+                    System.Configuration.ConfigurationManager.AppSettings["BackupCertificateName"] ?? "FileServerBackup");
 
                 ConfigureCustomAuthorization(serviceHost);
                 serviceHost.Open();

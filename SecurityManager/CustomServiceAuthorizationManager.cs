@@ -16,7 +16,7 @@ namespace SecurityManager
 
             System.Threading.Thread.CurrentPrincipal = principal;
 
-            bool retValue = principal.IsInRole("Read");
+            bool retValue = principal.IsInRole("See");
 
             if (!retValue)
             {
@@ -24,7 +24,7 @@ namespace SecurityManager
                 {
                     string serviceAddress = OperationContext.Current?.IncomingMessageHeaders?.To?.ToString() ?? "Authorization";
                     Audit.AuthorizationFailed(Formatter.ParseName(principal.Identity.Name),
-                        OperationContext.Current.IncomingMessageHeaders.Action, "Need Read permission.", serviceAddress);
+                        OperationContext.Current.IncomingMessageHeaders.Action, "Need See permission.", serviceAddress);
                 }
                 catch (Exception e)
                 {

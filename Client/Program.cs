@@ -23,6 +23,7 @@ namespace Client
             Console.WriteLine("======================================");
             Console.WriteLine($"Primary Server: {primaryAddress}");
             Console.WriteLine($"Backup Server: {backupAddress}");
+            Console.WriteLine($"Current Windows user: {System.Security.Principal.WindowsIdentity.GetCurrent().Name}");
 
             try
             {
