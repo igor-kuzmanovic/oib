@@ -9,20 +9,17 @@ namespace Server
     {
         private readonly FileService _fileService = new FileService();
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
         public string[] ShowFolderContent(string path)
         {
             return _fileService.ShowFolderContent(path);
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
         public FileData ReadFile(string path)
         {
             return _fileService.ReadFile(path);
         }
 
         [OperationBehavior(Impersonation = ImpersonationOption.Required)]
-        [PrincipalPermission(SecurityAction.Demand, Role = "Editor")]
         public bool CreateFile(string path, FileData fileData)
         {
             _fileService.CreateFile(path, fileData);
@@ -30,7 +27,6 @@ namespace Server
         }
 
         [OperationBehavior(Impersonation = ImpersonationOption.Required)]
-        [PrincipalPermission(SecurityAction.Demand, Role = "Editor")]
         public bool CreateFolder(string path)
         {
             _fileService.CreateFolder(path);
@@ -38,7 +34,6 @@ namespace Server
         }
 
         [OperationBehavior(Impersonation = ImpersonationOption.Required)]
-        [PrincipalPermission(SecurityAction.Demand, Role = "Editor")]
         public bool Delete(string path)
         {
             _fileService.Delete(path);
@@ -46,7 +41,6 @@ namespace Server
         }
 
         [OperationBehavior(Impersonation = ImpersonationOption.Required)]
-        [PrincipalPermission(SecurityAction.Demand, Role = "Editor")]
         public bool Rename(string sourcePath, string destinationPath)
         {
             _fileService.Rename(sourcePath, destinationPath);
@@ -54,7 +48,6 @@ namespace Server
         }
 
         [OperationBehavior(Impersonation = ImpersonationOption.Required)]
-        [PrincipalPermission(SecurityAction.Demand, Role = "Editor")]
         public bool MoveTo(string sourcePath, string destinationPath)
         {
             _fileService.MoveTo(sourcePath, destinationPath);

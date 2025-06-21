@@ -22,6 +22,7 @@ namespace SecurityManager
 
         public bool IsInRole(string permission)
         {
+            Console.WriteLine($"[CustomPrincipal] Checking if user '{Formatter.ParseName(identity.Name)}' has permission '{permission}'");
             foreach (IdentityReference group in this.identity.Groups)
             {
                 SecurityIdentifier sid = (SecurityIdentifier)group.Translate(typeof(SecurityIdentifier));
