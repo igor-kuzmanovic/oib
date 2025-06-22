@@ -8,9 +8,6 @@ namespace Contracts
 {
     public static class EncryptionHelper
     {
-        private const int KEY_SIZE = 256;
-        private const int BLOCK_SIZE = 128;
-
         public static byte[] GetSecretKey()
         {
             string keyString = ConfigurationManager.AppSettings["EncryptionKey"] ?? throw new InvalidOperationException("EncryptionKey is missing in App.config.");
@@ -26,10 +23,7 @@ namespace Contracts
             using (Aes aes = Aes.Create())
             {
                 aes.Mode = CipherMode.CBC;
-                aes.Padding = PaddingMode.PKCS7;
                 aes.Key = GetSecretKey();
-                aes.BlockSize = BLOCK_SIZE;
-                aes.KeySize = KEY_SIZE;
                 aes.GenerateIV();
 
                 byte[] encryptedContent;
@@ -57,11 +51,8 @@ namespace Contracts
             using (Aes aes = Aes.Create())
             {
                 aes.Mode = CipherMode.CBC;
-                aes.Padding = PaddingMode.PKCS7;
                 aes.Key = GetSecretKey();
                 aes.IV = fileData.InitializationVector;
-                aes.BlockSize = BLOCK_SIZE;
-                aes.KeySize = KEY_SIZE;
 
                 using (MemoryStream msDecrypt = new MemoryStream())
                 {
