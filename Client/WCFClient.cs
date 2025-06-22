@@ -70,10 +70,15 @@ namespace Client
                 Console.WriteLine($"Security error in '{operationName}': {ex.Message}");
                 return default;
             }
+            catch (FaultException<FileSystemException> ex)
+            {
+                Console.WriteLine($"File system error in '{operationName}': {ex.Message}");
+                return default;
+            }
             catch (FaultException ex)
             {
                 Console.WriteLine($"Fault error in '{operationName}': {ex.Message}");
-                return default;
+                return HandleFailover(operation, operationName, ex);
             }
             catch (CommunicationException ex)
             {
@@ -152,6 +157,7 @@ namespace Client
             // Retry the operation
             return TryExecute(operation, operationName);
         }
+
         private void SwitchToPrimaryServer()
         {
             try
@@ -232,7 +238,6 @@ namespace Client
             return ExecuteWithFailover(() =>
             {
                 var result = factory.ShowFolderContent(path);
-                Console.WriteLine("'ShowFolderContent' allowed");
                 return result;
             }, "ShowFolderContent");
         }
@@ -296,8 +301,6 @@ namespace Client
                 return result;
             }, "MoveTo");
         }
-
-        public bool IsConnectedToPrimary => usingPrimaryServer;
 
         public string GetCurrentServerAddress()
         {

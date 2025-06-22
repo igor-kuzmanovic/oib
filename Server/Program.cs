@@ -16,6 +16,10 @@ namespace Server
     {
         static void Main(string[] args)
         {
+            Console.WriteLine("FileServer Server");
+            Console.WriteLine("======================================");
+            Console.WriteLine($"Running as: {System.Security.Principal.WindowsIdentity.GetCurrent().Name}");
+
             ServerManager serverManager = new ServerManager();
             serverManager.StartServer();
         }

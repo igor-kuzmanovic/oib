@@ -22,32 +22,22 @@ namespace SecurityManager
 
         public bool IsInRole(string permission)
         {
-            Console.WriteLine($"[CustomPrincipal] Checking if user '{Formatter.ParseName(identity.Name)}' has permission '{permission}'");
             foreach (IdentityReference group in this.identity.Groups)
             {
                 SecurityIdentifier sid = (SecurityIdentifier)group.Translate(typeof(SecurityIdentifier));
                 var name = sid.Translate(typeof(NTAccount));
                 string groupName = Formatter.ParseName(name.ToString());
-                string[] permissions;
-                Console.WriteLine($"[CustomPrincipal] User group: '{groupName}'");
-                if (RolesConfig.GetPermissions(groupName, out permissions))
+                if (RolesConfig.GetPermissions(groupName, out string[] permissions))
                 {
-                    Console.WriteLine($"[CustomPrincipal] Permissions for group '{groupName}': {string.Join(",", permissions)}");
                     foreach (string permision in permissions)
                     {
                         if (permision.Equals(permission))
                         {
-                            Console.WriteLine($"[CustomPrincipal] Permission '{permission}' granted by group '{groupName}'");
                             return true;
                         }
                     }
                 }
-                else
-                {
-                    Console.WriteLine($"[CustomPrincipal] No permissions found for group '{groupName}'");
-                }
             }
-            Console.WriteLine($"[CustomPrincipal] Permission '{permission}' NOT granted");
             return false;
         }
     }

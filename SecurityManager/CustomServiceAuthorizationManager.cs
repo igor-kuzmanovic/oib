@@ -23,12 +23,11 @@ namespace SecurityManager
                 try
                 {
                     string serviceAddress = OperationContext.Current?.IncomingMessageHeaders?.To?.ToString() ?? "Authorization";
-                    Audit.AuthorizationFailed(Formatter.ParseName(principal.Identity.Name),
-                        OperationContext.Current.IncomingMessageHeaders.Action, "Need See permission.", serviceAddress);
+                    Audit.AuthorizationFailed(Formatter.ParseName(principal.Identity.Name), OperationContext.Current.IncomingMessageHeaders.Action, "Need See permission.", serviceAddress);
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e.Message);
+                    Console.WriteLine($"Error during authorization audit: {e.Message}");
                 }
             }
 

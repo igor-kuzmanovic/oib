@@ -21,9 +21,7 @@ namespace Client
 
             Console.WriteLine("FileServer Client");
             Console.WriteLine("======================================");
-            Console.WriteLine($"Primary Server: {primaryAddress}");
-            Console.WriteLine($"Backup Server: {backupAddress}");
-            Console.WriteLine($"Current Windows user: {System.Security.Principal.WindowsIdentity.GetCurrent().Name}");
+            Console.WriteLine($"Running as: {System.Security.Principal.WindowsIdentity.GetCurrent().Name}");
 
             try
             {

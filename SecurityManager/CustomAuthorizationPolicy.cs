@@ -20,6 +20,7 @@ namespace SecurityManager
         {
             get { return ClaimSet.System; }
         }
+
         public string Id
         {
             get;
@@ -38,22 +39,19 @@ namespace SecurityManager
                 return false;
             }
 
-            WindowsIdentity windowsIdentity = identities[0] as WindowsIdentity; try
+            WindowsIdentity windowsIdentity = identities[0] as WindowsIdentity;
+            try
             {
                 Audit.AuthenticationSuccess(Formatter.ParseName(windowsIdentity.Name), "Authentication");
-
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Console.WriteLine($"Error during authentication audit: {e.Message}");
             }
 
+            evaluationContext.Properties["Principal"] = new CustomPrincipal(windowsIdentity);
 
-            evaluationContext.Properties["Principal"] =
-                new CustomPrincipal(windowsIdentity);
             return true;
         }
-
-
     }
 }

@@ -136,10 +136,8 @@ namespace Client
                 // Decrypt content after receiving from server
                 byte[] decryptedContent = Contracts.EncryptionHelper.DecryptContent(fileData);
                 Console.WriteLine($"\nFile '{filePath}' content:");
-                Console.WriteLine("-------------------------------------------");
                 string textContent = Encoding.UTF8.GetString(decryptedContent);
                 Console.WriteLine(textContent);
-                Console.WriteLine("-------------------------------------------");
             }
             else
             {
@@ -171,10 +169,6 @@ namespace Client
 
             // Encrypt content before sending to server
             FileData newFileData = Contracts.EncryptionHelper.EncryptContent(contentBytes);
-
-            // Add client-side logs
-            Console.WriteLine("Client: FileData.Content length: " + newFileData.Content?.Length);
-            Console.WriteLine("Client: FileData.InitializationVector length: " + newFileData.InitializationVector?.Length);
 
             bool fileCreated = proxy.CreateFile(newFilePath, newFileData);
             Console.WriteLine($"\nFile creation {(fileCreated ? "successful" : "failed")}.");
@@ -210,9 +204,8 @@ namespace Client
 
         private void CheckServerStatus()
         {
-            string serverType = proxy.IsConnectedToPrimary ? "PRIMARY" : "BACKUP";
             string serverAddress = proxy.GetCurrentServerAddress();
-            Console.WriteLine($"\nCurrently connected to: {serverType} server at {serverAddress}");
+            Console.WriteLine($"\nCurrently connected to: {serverAddress}");
         }
     }
 }

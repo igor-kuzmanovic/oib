@@ -16,20 +16,14 @@ using System.Configuration;
 
 namespace Server
 {
-    public enum ServerRole
-    {
-        Primary,
-        Backup
-    }
     public class ServerManager
     {
-        public static readonly string PrimaryServerAddress = GetConfigValue("PrimaryServerAddress", "net.tcp://localhost:9999/WCFService");
-        public static readonly string BackupServerAddress = GetConfigValue("BackupServerAddress", "net.tcp://localhost:8888/WCFService");
+        public static readonly string PrimaryServerAddress = ConfigurationManager.AppSettings["PrimaryServerAddress"] ?? throw new InvalidOperationException("PrimaryServerAddress is missing in App.config.");
+        public static readonly string BackupServerAddress = ConfigurationManager.AppSettings["BackupServerAddress"] ?? throw new InvalidOperationException("BackupServerAddress is missing in App.config.");
 
-        public static readonly string DataDirectory = GetDataDirectoryFromConfig();
+        public static readonly string DataDirectory = ConfigurationManager.AppSettings["DataDirectory"] ?? throw new InvalidOperationException("DataDirectory is missing in App.config.");
 
         private static bool isPrimaryServer = false;
-        private readonly object lockObject = new object();
         private ServiceHost serviceHost;
 
         public static bool IsPrimaryServer()
@@ -39,9 +33,6 @@ namespace Server
 
         public void StartServer()
         {
-            Console.WriteLine("Starting File Server...");
-            DisplayStorageLocations();
-
             Directory.CreateDirectory(DataDirectory);
 
             if (IsPrimaryServerRunning())
@@ -55,16 +46,11 @@ namespace Server
                 StartAsPrimary();
             }
         }
-        private void DisplayStorageLocations()
-        {
-            Console.WriteLine($"Files Directory: {DataDirectory}");
-        }
 
         public void StartAsBackup()
         {
             StartBackupServer();
 
-            Console.WriteLine("Backup WCFService is opened. Press <enter> to finish...");
             Console.ReadLine();
 
             CleanupServer();
@@ -74,7 +60,6 @@ namespace Server
         {
             StartPrimaryServer();
 
-            Console.WriteLine("Primary WCFService is opened. Press <enter> to finish...");
             Console.ReadLine();
 
             CleanupServer();
@@ -98,7 +83,7 @@ namespace Server
                 serviceHost.Open();
                 isPrimaryServer = true;
 
-                Console.WriteLine($"Primary server started on {PrimaryServerAddress}");
+                Console.WriteLine($"Primary server started on {PrimaryServerAddress}. Press <enter> to finish...");
             }
             catch (Exception ex)
             {
@@ -125,13 +110,13 @@ namespace Server
                     StoreLocation.LocalMachine,
                     StoreName.My,
                     X509FindType.FindBySubjectName,
-                    System.Configuration.ConfigurationManager.AppSettings["BackupCertificateName"] ?? "FileServerBackup");
-
+                    System.Configuration.ConfigurationManager.AppSettings["BackupCertificateName"] ?? throw new InvalidOperationException("BackupCertificateName is missing in App.config.")
+                 );
                 ConfigureCustomAuthorization(serviceHost);
                 serviceHost.Open();
                 isPrimaryServer = false;
 
-                Console.WriteLine($"Backup server started on {BackupServerAddress}");
+                Console.WriteLine($"Backup server started on {BackupServerAddress}. Press <enter> to finish...");
                 Audit.BackupServerStarted(BackupServerAddress);
             }
             catch (Exception ex)
@@ -260,52 +245,6 @@ namespace Server
                     Console.WriteLine("Server aborted due to error during close.");
                 }
             }
-        }
-
-        // Helper method to get DataDirectory from App.config
-        private static string GetDataDirectoryFromConfig()
-        {
-            try
-            {
-                string configPath = ConfigurationManager.AppSettings["DataDirectory"];
-                if (!string.IsNullOrEmpty(configPath))
-                {
-                    Console.WriteLine($"Found DataDirectory in App.config: {configPath}");
-                    return configPath;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error reading DataDirectory from App.config: {ex.Message}");
-            }
-
-            // Fallback to default location
-            string defaultPath = Path.Combine(
-                Path.GetDirectoryName(Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory)),
-                "Files");
-            Console.WriteLine($"Using default DataDirectory: {defaultPath}");
-            return defaultPath;
-        }
-
-        // Helper method to get any config value with a default fallback
-        private static string GetConfigValue(string key, string defaultValue)
-        {
-            try
-            {
-                string value = ConfigurationManager.AppSettings[key];
-                if (!string.IsNullOrEmpty(value))
-                {
-                    Console.WriteLine($"Found {key} in App.config: {value}");
-                    return value;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error reading {key} from App.config: {ex.Message}");
-            }
-
-            Console.WriteLine($"Using default {key}: {defaultValue}");
-            return defaultValue;
         }
     }
 }
