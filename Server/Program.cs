@@ -1,14 +1,6 @@
+using Server.Managers;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.ServiceModel;
-using System.ServiceModel.Description;
-using Contracts;
-using System.IdentityModel.Policy;
-using SecurityManager;
-using System.IO;
-using System.Threading;
+using System.Security.Principal;
 
 namespace Server
 {
@@ -18,10 +10,17 @@ namespace Server
         {
             Console.WriteLine("FileServer Server");
             Console.WriteLine("======================================");
-            Console.WriteLine($"Running as: {System.Security.Principal.WindowsIdentity.GetCurrent().Name}");
+            Console.WriteLine($"Running as: {WindowsIdentity.GetCurrent().Name}");
 
-            ServerManager serverManager = new ServerManager();
-            serverManager.StartServer();
+            using (var serverManager = new FailoverServerManager())
+            {
+                serverManager.StartServer();
+
+                Console.WriteLine("Press Enter to stop the server...");
+                Console.ReadLine();
+
+                serverManager.ShutdownServer();
+            }
         }
     }
 }

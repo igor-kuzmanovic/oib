@@ -48,11 +48,24 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CommandProcessor.cs" />
+    <Compile Include="Commands\CommandBase.cs" />
+    <Compile Include="Commands\CommandRegistry.cs" />
+    <Compile Include="Commands\CreateFileCommand.cs" />
+    <Compile Include="Commands\CreateFolderCommand.cs" />
+    <Compile Include="Commands\DeleteItemCommand.cs" />
+    <Compile Include="Commands\ExitCommand.cs" />
+    <Compile Include="Commands\ICommand.cs" />
+    <Compile Include="Commands\ListFolderCommand.cs" />
+    <Compile Include="Commands\MoveItemCommand.cs" />
+    <Compile Include="Commands\ReadFileCommand.cs" />
+    <Compile Include="Commands\RenameItemCommand.cs" />
+    <Compile Include="Commands\ServerStatusCommand.cs" />
+    <Compile Include="Infrastructure\Configuration.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ServerConfig.cs" />
-    <Compile Include="WCFClient.cs" />
+    <Compile Include="Services\CommandProcessorService.cs" />
+    <Compile Include="Services\FileServiceClient.cs" />
+    <Compile Include="Services\IFileServiceClient.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
