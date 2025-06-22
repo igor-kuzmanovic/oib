@@ -315,6 +315,15 @@ namespace Server
                 // Only list directories and .txt files
                 var entries = Directory.GetFileSystemEntries(resolvedPath)
                     .Where(entry => Directory.Exists(entry) || (File.Exists(entry) && entry.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)))
+                    .Select(entry =>
+                    {
+                        // Convert absolute paths to relative paths (relative to the DataDirectory)
+                        if (entry.StartsWith(ServerManager.DataDirectory, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return entry.Substring(ServerManager.DataDirectory.Length).TrimStart('\\', '/');
+                        }
+                        return entry;
+                    })
                     .ToArray();
 
                 LogSuccess(user);
