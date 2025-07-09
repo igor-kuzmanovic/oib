@@ -109,7 +109,7 @@ namespace Server.Services
                 byte[] decryptedContent = EncryptionHelper.DecryptContent(fileData);
                 string resolvedPath = ResolvePath(path);
 
-                var identity = WindowsIdentity.GetCurrent();
+                var identity = GetCallingUserIdentity();
                 using (var context = identity.Impersonate())
                 {
                     string directory = Path.GetDirectoryName(resolvedPath);
@@ -148,7 +148,7 @@ namespace Server.Services
             {
                 string resolvedPath = ResolvePath(path);
 
-                var identity = WindowsIdentity.GetCurrent();
+                var identity = GetCallingUserIdentity();
                 using (var context = identity.Impersonate())
                 {
                     Directory.CreateDirectory(resolvedPath);
@@ -181,7 +181,7 @@ namespace Server.Services
             {
                 string resolvedPath = ResolvePath(path);
 
-                var identity = WindowsIdentity.GetCurrent();
+                var identity = GetCallingUserIdentity();
                 using (var context = identity.Impersonate())
                 {
                     bool isFile = File.Exists(resolvedPath);
@@ -231,7 +231,7 @@ namespace Server.Services
                 string resolvedSourcePath = ResolvePath(sourcePath);
                 string resolvedDestinationPath = ResolvePath(destinationPath);
 
-                var identity = WindowsIdentity.GetCurrent();
+                var identity = GetCallingUserIdentity();
                 using (var context = identity.Impersonate())
                 {
                     bool isFile = File.Exists(resolvedSourcePath);
@@ -379,6 +379,23 @@ namespace Server.Services
             }
 
             return safePath;
+        }
+
+        private WindowsIdentity GetCallingUserIdentity()
+        {
+            try
+            {
+                if (OperationContext.Current?.ServiceSecurityContext?.WindowsIdentity != null)
+                {
+                    return OperationContext.Current.ServiceSecurityContext.WindowsIdentity;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to get calling user identity: {ex.Message}");
+            }
+            
+            return WindowsIdentity.GetCurrent();
         }
     }
 }
