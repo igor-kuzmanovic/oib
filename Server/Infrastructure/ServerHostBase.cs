@@ -56,24 +56,5 @@ namespace Server.Infrastructure
         {
             Stop();
         }
-
-        protected void ConfigureAuthorization(ServiceHost host)
-        {
-            host.Authorization.ServiceAuthorizationManager = new AuthorizationManager();
-            host.Authorization.PrincipalPermissionMode = PrincipalPermissionMode.Custom;
-
-            List<IAuthorizationPolicy> policies = new List<IAuthorizationPolicy>();
-            policies.Add(new AuthorizationPolicy());
-            host.Authorization.ExternalAuthorizationPolicies = policies.AsReadOnly();
-
-            var serviceBehavior = host.Description.Behaviors.Find<ServiceBehaviorAttribute>();
-            if (serviceBehavior == null)
-            {
-                serviceBehavior = new ServiceBehaviorAttribute();
-                host.Description.Behaviors.Add(serviceBehavior);
-            }
-
-            serviceBehavior.IncludeExceptionDetailInFaults = true;
-        }
     }
 }

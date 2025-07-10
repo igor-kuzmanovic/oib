@@ -28,6 +28,41 @@ namespace Contracts.Helpers
             return certificate;
         }
 
+        public static X509Certificate2 GetCertificate()
+        {
+            string currentUser = ParseName(WindowsIdentity.GetCurrent().Name);
+
+            using (var store = new X509Store(StoreName.My, StoreLocation.CurrentUser))
+            {
+                store.Open(OpenFlags.ReadOnly | OpenFlags.OpenExistingOnly);
+
+                foreach (var cert in store.Certificates)
+                {
+                    string subject = cert.Subject;
+
+                    string cn = null;
+                    var parts = subject.Split(',');
+                    foreach (var part in parts)
+                    {
+                        var trimmed = part.Trim();
+                        if (trimmed.StartsWith("CN=", StringComparison.OrdinalIgnoreCase))
+                        {
+                            cn = trimmed.Substring(3).Trim();
+                            break;
+                        }
+                    }
+
+                    if (string.IsNullOrEmpty(cn))
+                        continue;
+
+                    if (cn.IndexOf(currentUser, StringComparison.OrdinalIgnoreCase) >= 0)
+                        return cert;
+                }
+
+                return null;
+            }
+        }
+
         public static string GetName(X509Certificate2 certificate)
         {
             string name = string.Empty;

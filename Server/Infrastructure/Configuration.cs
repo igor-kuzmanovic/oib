@@ -11,7 +11,8 @@ namespace Server.Infrastructure
             EnsureDirectoriesExist();
         }
 
-        public static string ServerAddress => ConfigurationManager.AppSettings["ServerAddress"] ?? "net.tcp://localhost:9999/WCFService";
+        public static string PrimaryServerAddress => ConfigurationManager.AppSettings["PrimaryServerAddress"] ?? "net.tcp://localhost:9999/WCFService";
+        public static string SecondaryServerAddress => ConfigurationManager.AppSettings["SecondaryServerAddress"] ?? "net.tcp://localhost:8888/WCFService";
 
         public static string DataDirectory => ConfigurationManager.AppSettings["DataDirectory"] ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..\\..\\..\\Files");
 

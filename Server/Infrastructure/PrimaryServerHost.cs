@@ -1,16 +1,24 @@
+using Contracts.Helpers;
 using Contracts.Interfaces;
 using Server.Audit;
+using Server.Authorization;
 using Server.Services;
 using System;
+using System.Collections.Generic;
+using System.IdentityModel.Policy;
 using System.Security.Cryptography.X509Certificates;
 using System.ServiceModel;
+using System.ServiceModel.Description;
 using System.ServiceModel.Security;
 
 namespace Server.Infrastructure
 {
     public class PrimaryServerHost : ServerHostBase
     {
-        public PrimaryServerHost() : base(Configuration.ServerAddress) { }
+        public PrimaryServerHost() : base(Configuration.PrimaryServerAddress)
+        {
+            serverCertificate = SecurityHelper.GetCertificate();
+        }
 
         public override void Start()
         {
@@ -18,15 +26,26 @@ namespace Server.Infrastructure
             {
                 Console.WriteLine($"Primary server certificate loaded: {serverCertificate.SubjectName.Name}");
 
-                var binding = new NetTcpBinding();
-                binding.Security.Mode = SecurityMode.Transport;
-                binding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Certificate;
-                binding.Security.Transport.ProtectionLevel = System.Net.Security.ProtectionLevel.EncryptAndSign;
+                var clientBinding = new NetTcpBinding();
+                clientBinding.Security.Mode = SecurityMode.Transport;
+                clientBinding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Windows;
+                clientBinding.Security.Transport.ProtectionLevel = System.Net.Security.ProtectionLevel.EncryptAndSign;
+
+                var backupBinding = new NetTcpBinding();
+                backupBinding.Security.Mode = SecurityMode.Transport;
+                backupBinding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Certificate;
+                backupBinding.Security.Transport.ProtectionLevel = System.Net.Security.ProtectionLevel.EncryptAndSign;
 
                 serviceHost = new ServiceHost(typeof(WCFService));
-                serviceHost.AddServiceEndpoint(typeof(IWCFService), binding, serverAddress);
+                serviceHost.AddServiceEndpoint(typeof(IWCFService), clientBinding, serverAddress);
+                serviceHost.AddServiceEndpoint(typeof(IWCFService), backupBinding, serverAddress);
 
-                ConfigureAuthorization(serviceHost);
+                serviceHost.Authorization.ServiceAuthorizationManager = new AuthorizationManager();
+                serviceHost.Authorization.PrincipalPermissionMode = PrincipalPermissionMode.Custom;
+
+                List<IAuthorizationPolicy> policies = new List<IAuthorizationPolicy>();
+                policies.Add(new AuthorizationPolicy());
+                serviceHost.Authorization.ExternalAuthorizationPolicies = policies.AsReadOnly();
 
                 serviceHost.Open();
 
