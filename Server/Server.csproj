@@ -59,6 +59,7 @@
     <Compile Include="Audit\AuditFacade.cs" />
     <Compile Include="Authorization\AuthorizationManager.cs" />
     <Compile Include="Authorization\AuthorizationPolicy.cs" />
+    <Compile Include="Authorization\CertificateValidator.cs" />
     <Compile Include="Authorization\Principal.cs" />
     <Compile Include="Authorization\ICustomPrincipal.cs" />
     <Compile Include="Authorization\RolesConfig.cs" />

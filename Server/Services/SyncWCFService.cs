@@ -8,7 +8,7 @@ namespace Server.Services
     {
         public bool Ping()
         {
-            Console.WriteLine("SyncWCFService.Ping() called");
+            Console.WriteLine("Ping received");
             return true;
         }
     }
