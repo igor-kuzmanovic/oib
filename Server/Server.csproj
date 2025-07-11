@@ -62,12 +62,8 @@
     <Compile Include="Authorization\Principal.cs" />
     <Compile Include="Authorization\ICustomPrincipal.cs" />
     <Compile Include="Authorization\RolesConfig.cs" />
-    <Compile Include="Infrastructure\ServerRoleHelper.cs" />
     <Compile Include="Infrastructure\Configuration.cs" />
-    <Compile Include="Infrastructure\ServerManager.cs" />
-    <Compile Include="Infrastructure\ServerInstance.cs" />
-    <Compile Include="Services\SyncServiceProxy.cs" />
-    <Compile Include="Infrastructure\IServerManager.cs" />
+    <Compile Include="Infrastructure\FileServer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Services\FileStorageService.cs" />
@@ -75,6 +71,7 @@
     <Compile Include="Services\IFileStorageService.cs" />
     <Compile Include="Services\FileWCFService.cs" />
     <Compile Include="Services\ISyncWCFService.cs" />
+    <Compile Include="Services\SyncServiceProxy.cs" />
     <Compile Include="Services\SyncWCFService.cs" />
   </ItemGroup>
   <ItemGroup>

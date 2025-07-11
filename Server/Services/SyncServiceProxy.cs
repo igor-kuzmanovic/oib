@@ -9,19 +9,16 @@ namespace Server.Services
         private ChannelFactory<ISyncWCFService> factory;
         private ISyncWCFService proxy;
 
-        public SyncServiceProxy(string address, X509Certificate2 clientCertificate, string serverCertCN)
+        public SyncServiceProxy(string address, X509Certificate2 clientCertificate, X509Certificate2 remoteServerCertificate)
         {
             var binding = new NetTcpBinding();
             binding.Security.Mode = SecurityMode.Transport;
             binding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Certificate;
             binding.Security.Transport.ProtectionLevel = System.Net.Security.ProtectionLevel.EncryptAndSign;
 
-            var serverCert = Contracts.Helpers.SecurityHelper.GetCertificate(
-                StoreName.TrustedPeople, StoreLocation.LocalMachine, serverCertCN);
-
             var endpointAddress = new EndpointAddress(
                 new Uri(address),
-                new X509CertificateEndpointIdentity(serverCert)
+                new X509CertificateEndpointIdentity(remoteServerCertificate)
             );
 
             factory = new ChannelFactory<ISyncWCFService>(binding, endpointAddress);
