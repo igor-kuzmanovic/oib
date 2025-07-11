@@ -121,6 +121,10 @@ namespace Server.Infrastructure
             fileBinding.Security.Mode = SecurityMode.Transport;
             fileBinding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Windows;
             fileBinding.Security.Transport.ProtectionLevel = System.Net.Security.ProtectionLevel.EncryptAndSign;
+            fileBinding.OpenTimeout = TimeSpan.FromSeconds(1);
+            fileBinding.CloseTimeout = TimeSpan.FromSeconds(1);
+            fileBinding.ReceiveTimeout = TimeSpan.FromSeconds(2);
+            fileBinding.SendTimeout = TimeSpan.FromSeconds(2);
 
             fileHost = new ServiceHost(typeof(FileWCFService));
             fileHost.AddServiceEndpoint(typeof(IFileWCFService), fileBinding, fileAddress);
@@ -144,6 +148,10 @@ namespace Server.Infrastructure
             syncBinding.Security.Mode = SecurityMode.Transport;
             syncBinding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Certificate;
             syncBinding.Security.Transport.ProtectionLevel = System.Net.Security.ProtectionLevel.EncryptAndSign;
+            syncBinding.OpenTimeout = TimeSpan.FromSeconds(1);
+            syncBinding.CloseTimeout = TimeSpan.FromSeconds(1);
+            syncBinding.ReceiveTimeout = TimeSpan.FromSeconds(2);
+            syncBinding.SendTimeout = TimeSpan.FromSeconds(2);
 
             syncHost = new ServiceHost(typeof(SyncWCFService));
             syncHost.AddServiceEndpoint(typeof(ISyncWCFService), syncBinding, syncAddress);
