@@ -3,6 +3,8 @@ using Contracts.Interfaces;
 using Server.Services;
 using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.ServiceModel;
 using System.ServiceModel.Description;
@@ -23,15 +25,17 @@ namespace Server.Infrastructure
         private readonly string fileAddress;
         private readonly string syncAddress;
         private readonly string remoteSyncAddress;
+        private readonly X509Certificate2 serverCertificate;
         private readonly X509Certificate2 remoteServerCertificate;
+        private readonly X509Certificate2 clientCertificate;
         private bool isRunning;
         private bool isBackupActive;
 
         public FileServer()
         {
-            var serverCertificate = SecurityHelper.GetCurrentUserCertificate();
+            serverCertificate = clientCertificate = SecurityHelper.GetCurrentUserCertificate();
             if (serverCertificate == null)
-                throw new ApplicationException("Local server certificate not found or invalid.");
+                throw new ApplicationException("Local server/client certificate not found or invalid.");
 
             string currentCN = SecurityHelper.GetName(serverCertificate);
             string remoteCN = currentCN == Configuration.PrimaryServerCN ? Configuration.BackupServerCN : Configuration.PrimaryServerCN;
@@ -42,37 +46,8 @@ namespace Server.Infrastructure
             Console.WriteLine($"Loaded local certificate CN: {currentCN}");
             Console.WriteLine($"Expected remote certificate CN: {remoteCN}");
 
-            bool primaryUp = false, backupUp = false;
-
-            try
-            {
-                using (var proxy = new SyncServiceProxy(Configuration.PrimaryServerSyncAddress, serverCertificate, remoteServerCertificate))
-                {
-                    primaryUp = proxy.Ping();
-                    Console.WriteLine($"Ping to {Configuration.PrimaryServerSyncAddress}: {(primaryUp ? "Success" : "Failed")}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Ping to {Configuration.PrimaryServerSyncAddress}: Failed. Exception: {ex.GetType().Name}: {ex.Message}");
-                if (ex.InnerException != null)
-                    Console.WriteLine($"InnerException: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}");
-            }
-
-            try
-            {
-                using (var proxy = new SyncServiceProxy(Configuration.BackupServerSyncAddress, serverCertificate, remoteServerCertificate))
-                {
-                    backupUp = proxy.Ping();
-                    Console.WriteLine($"Ping to {Configuration.BackupServerSyncAddress}: {(backupUp ? "Success" : "Failed")}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Ping to {Configuration.BackupServerSyncAddress}: Failed. Exception: {ex.GetType().Name}: {ex.Message}");
-                if (ex.InnerException != null)
-                    Console.WriteLine($"InnerException: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}");
-            }
+            bool primaryUp = !IsPortAvailable(new Uri(Configuration.PrimaryServerSyncAddress).Port);
+            bool backupUp = !IsPortAvailable(new Uri(Configuration.BackupServerSyncAddress).Port);
 
             if (primaryUp && backupUp)
                 throw new ApplicationException("Both sync services are running. Cannot start another server.");
@@ -169,15 +144,13 @@ namespace Server.Infrastructure
                     Mode = SecurityMode.Transport,
                     Transport = {
                         ClientCredentialType = TcpClientCredentialType.Certificate,
-                        ProtectionLevel = System.Net.Security.ProtectionLevel.EncryptAndSign
                     }
-                }
+                },
             };
 
             syncHost = new ServiceHost(typeof(SyncWCFService));
             syncHost.AddServiceEndpoint(typeof(ISyncWCFService), syncBinding, syncAddress);
 
-            var serverCertificate = SecurityHelper.GetCurrentUserCertificate();
             syncHost.Credentials.ServiceCertificate.Certificate = serverCertificate;
             syncHost.Credentials.ClientCertificate.Authentication.CertificateValidationMode = X509CertificateValidationMode.Custom;
             syncHost.Credentials.ClientCertificate.Authentication.CustomCertificateValidator = new CertificateValidator();
@@ -208,7 +181,6 @@ namespace Server.Infrastructure
                 if (!isBackupActive || role != ServerRole.Backup)
                     return;
 
-                var clientCertificate = SecurityHelper.GetCurrentUserCertificate();
                 bool remoteIsUp = false;
 
                 try
@@ -236,33 +208,95 @@ namespace Server.Infrastructure
             }
         }
 
+        private static bool IsPortAvailable(int port)
+        {
+            TcpListener listener = null;
+            try
+            {
+                listener = new TcpListener(IPAddress.Loopback, port);
+                listener.Start();
+                return true;
+            }
+            catch (SocketException)
+            {
+                return false;
+            }
+            finally
+            {
+                listener?.Stop();
+            }
+        }
+
         public void Stop()
         {
-            if (!isRunning) return;
+            if (!isRunning)
+                return;
 
-            try
-            {
-                fileHost?.Close();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error closing fileHost: {ex.Message}");
-            }
-
-            try
-            {
-                syncHost?.Close();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error closing syncHost: {ex.Message}");
-            }
+            Console.WriteLine("[FileServer] Stopping server...");
 
             isBackupActive = false;
-            backupTimer?.Dispose();
+
+            if (backupTimer != null)
+            {
+                try
+                {
+                    backupTimer.Dispose();
+                    backupTimer = null;
+                    Console.WriteLine("[FileServer] Backup timer disposed.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[FileServer] Error disposing backupTimer: {ex.Message}");
+                }
+            }
+
+            if (fileHost != null)
+            {
+                try
+                {
+                    if (fileHost.State != CommunicationState.Closed && fileHost.State != CommunicationState.Closing)
+                    {
+                        fileHost.Close();
+                        Console.WriteLine("[FileServer] fileHost closed.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[FileServer] Error closing fileHost: {ex.Message}");
+                    fileHost.Abort();
+                }
+                finally
+                {
+                    fileHost = null;
+                }
+            }
+
+            if (syncHost != null)
+            {
+                try
+                {
+                    if (syncHost.State != CommunicationState.Closed && syncHost.State != CommunicationState.Closing)
+                    {
+                        syncHost.Close();
+                        Console.WriteLine("[FileServer] syncHost closed.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[FileServer] Error closing syncHost: {ex.Message}");
+                    syncHost.Abort();
+                }
+                finally
+                {
+                    syncHost = null;
+                }
+            }
+
             isRunning = false;
-            Console.WriteLine("Server stopped.");
+
+            Console.WriteLine("[FileServer] Server stopped.");
         }
+
 
         public void Dispose()
         {

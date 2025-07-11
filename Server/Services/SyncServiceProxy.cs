@@ -2,6 +2,7 @@ using System;
 using System.ServiceModel;
 using System.Security.Cryptography.X509Certificates;
 using System.ServiceModel.Security;
+using Contracts.Helpers;
 
 namespace Server.Services
 {
@@ -20,9 +21,8 @@ namespace Server.Services
                     Transport =
                     {
                         ClientCredentialType = TcpClientCredentialType.Certificate,
-                        ProtectionLevel = System.Net.Security.ProtectionLevel.EncryptAndSign
                     }
-                }
+                },
             };
 
             var endpointAddress = new EndpointAddress(
@@ -49,13 +49,19 @@ namespace Server.Services
             {
                 try
                 {
-                    if (comm.State != CommunicationState.Faulted)
-                        comm.Close();
-                    else
+                    if (comm.State == CommunicationState.Faulted)
+                    {
+                        Console.WriteLine("[SyncServiceProxy] Proxy faulted. Aborting...");
                         comm.Abort();
+                    }
+                    else
+                    {
+                        comm.Close();
+                    }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Console.WriteLine($"[SyncServiceProxy] Exception while disposing proxy: {ex.GetType().Name}: {ex.Message}");
                     comm.Abort();
                 }
             }
@@ -64,13 +70,19 @@ namespace Server.Services
             {
                 try
                 {
-                    if (factory.State != CommunicationState.Faulted)
-                        factory.Close();
-                    else
+                    if (factory.State == CommunicationState.Faulted)
+                    {
+                        Console.WriteLine("[SyncServiceProxy] Factory faulted. Aborting...");
                         factory.Abort();
+                    }
+                    else
+                    {
+                        factory.Close();
+                    }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Console.WriteLine($"[SyncServiceProxy] Exception while disposing factory: {ex.GetType().Name}: {ex.Message}");
                     factory.Abort();
                 }
             }

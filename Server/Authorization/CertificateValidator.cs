@@ -6,17 +6,22 @@ public class CertificateValidator : X509CertificateValidator
 {
     public override void Validate(X509Certificate2 certificate)
     {
-        Console.WriteLine("[CertificateValidator] 'Validate' called");
+        Console.WriteLine("[CertificateValidator] Validate called");
 
         try
         {
+            Console.WriteLine($"[CertificateValidator] Validating certificate: Subject='{certificate.Subject}', Thumbprint='{certificate.Thumbprint}'");
+
             X509Chain chain = new X509Chain();
             chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+
             bool isValid = chain.Build(certificate);
+
+            Console.WriteLine($"[CertificateValidator] Chain build result: {isValid}");
 
             if (!isValid)
             {
-                Console.WriteLine("[CertificateValidator] Certificate validation failed:");
+                Console.WriteLine("[CertificateValidator] Certificate validation failed. Chain statuses:");
                 foreach (var status in chain.ChainStatus)
                 {
                     Console.WriteLine($"[CertificateValidator] - {status.StatusInformation.Trim()}");
@@ -30,6 +35,6 @@ public class CertificateValidator : X509CertificateValidator
             throw;
         }
 
-        Console.WriteLine("[CertificateValidator] 'Validate' success");
+        Console.WriteLine("[CertificateValidator] Validate success");
     }
 }

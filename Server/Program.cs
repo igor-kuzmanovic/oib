@@ -1,10 +1,10 @@
-using Server.Infrastructure;
 using System;
 using System.Security.Principal;
+using Server.Infrastructure;
 
 namespace Server
 {
-    public class Program
+    class Program
     {
         static void Main(string[] args)
         {
@@ -12,21 +12,25 @@ namespace Server
             Console.WriteLine("======================================");
             Console.WriteLine($"Running as: {WindowsIdentity.GetCurrent().Name}");
 
+            FileServer fileServer = null;
+
             try
             {
-                using (var fileServer = new Server.Infrastructure.FileServer())
-                {
-                    fileServer.Start();
-                    Console.WriteLine("Press Enter to stop the server...");
-                    Console.ReadLine();
-                    fileServer.Stop();
-                }
+                fileServer = new FileServer();
+                fileServer.Start();
+                Console.WriteLine("Press Enter to stop the server...");
+                Console.ReadLine();
             }
             catch (ApplicationException ex)
             {
                 Console.WriteLine($"ERROR: {ex.Message}");
                 if (ex.InnerException != null)
                     Console.WriteLine($"DETAILS: {ex.InnerException.Message}");
+            }
+            finally
+            {
+                fileServer?.Dispose();
+
                 Console.WriteLine("Press Enter to exit...");
                 Console.ReadLine();
             }
