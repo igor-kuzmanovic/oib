@@ -1,45 +1,69 @@
 using Contracts.Authorization;
 using Contracts.Helpers;
 using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Linq;
 
 namespace Server.Authorization
 {
     public static class RolesConfig
     {
 
-        public static bool GetPermissions(string username, out Permission[] permissions)
+        public static bool GetPermissions(IEnumerable<Role> roles, out Permission[] permissions)
         {
-            string[] permissionStrings = new string[10];
-            bool result = false;
+            Console.WriteLine($"[RolesConfig] Called 'GetPermissions' with roles: {string.Join(", ", roles)}");
 
-            string normalizedUsername = SecurityHelper.ParseName(username ?? string.Empty);
-            string permissionString = (string)RolesConfigFile.ResourceManager.GetObject(normalizedUsername);
+            var permissionSet = new HashSet<Permission>();
 
-            if (permissionString != null)
+            foreach (var role in roles)
             {
-                permissionStrings = permissionString.Split(',');
+                Console.WriteLine($"[RolesConfig] Checking role: {role}");
 
-                result = true;
-            }
+                string normalizedRoleName = role.ToString().Trim().ToUpperInvariant();
 
-            if (result)
-            {
-                permissions = new Permission[permissionStrings.Length];
+                string permissionString = ConfigurationManager.AppSettings[normalizedRoleName];
 
-                for (int i = 0; i < permissionStrings.Length; i++)
+                if (permissionString == null)
                 {
-                    if (Enum.TryParse(permissionStrings[i], out Permission permission))
-                    {
-                        permissions[i] = permission;
-                    }
+                    Console.WriteLine($"[RolesConfig] No permissions found for role: {normalizedRoleName}");
+                    continue;
                 }
 
-                return true;
-            }
-            
-            permissions = new Permission[0];
+                Console.WriteLine($"[RolesConfig] Permissions string found for role '{normalizedRoleName}': {permissionString}");
 
-            return false;
+                var parts = permissionString.Split(',');
+
+                if (parts.Length == 0)
+                {
+                    Console.WriteLine($"[RolesConfig] Empty permissions for role: {normalizedRoleName}");
+                    continue;
+                }
+
+                foreach (var part in parts)
+                {
+                    if (Enum.TryParse(part.Trim(), out Permission p))
+                    {
+                        permissionSet.Add(p);
+                        Console.WriteLine($"[RolesConfig] Added permission: {p}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[RolesConfig] Failed to parse permission: '{part}' for role: {normalizedRoleName}");
+                    }
+                }
+            }
+
+            if (permissionSet.Count == 0)
+            {
+                Console.WriteLine("[RolesConfig] No permissions found for any roles.");
+                permissions = Array.Empty<Permission>();
+                return false;
+            }
+
+            permissions = permissionSet.ToArray();
+            Console.WriteLine($"[RolesConfig] Total permissions loaded: {permissions.Length}");
+            return true;
         }
     }
 }

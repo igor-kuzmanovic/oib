@@ -1,4 +1,4 @@
-using Server.Managers;
+using Server.Infrastructure;
 using System;
 using System.Security.Principal;
 
@@ -12,13 +12,11 @@ namespace Server
             Console.WriteLine("======================================");
             Console.WriteLine($"Running as: {WindowsIdentity.GetCurrent().Name}");
 
-            using (var serverManager = new FailoverServerManager())
+            using (var serverManager = new ServerManager())
             {
                 serverManager.StartServer();
-
                 Console.WriteLine("Press Enter to stop the server...");
                 Console.ReadLine();
-
                 serverManager.ShutdownServer();
             }
         }

@@ -7,7 +7,7 @@ using System.ServiceModel;
 namespace Server.Services
 {
     [ServiceBehavior(IncludeExceptionDetailInFaults = true)]
-    public class WCFService : IWCFService
+    public class FileWCFService : IFileWCFService
     {
         private static readonly IFileStorageService fileStorageService = new FileStorageService();
 
@@ -48,7 +48,7 @@ namespace Server.Services
 
         public void Dispose()
         {
-            // Cleanup if needed
+            
         }
     }
 }

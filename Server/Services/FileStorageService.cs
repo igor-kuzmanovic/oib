@@ -90,7 +90,7 @@ namespace Server.Services
             if (principal == null || !principal.IsInRole(Permission.Change))
             {
                 LogFailure(user, "CreateFile requires Change permission.");
-                throw new FaultException<SecurityException>(new SecurityException($"User {user} is not authorized for CreateFile."));
+                throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for CreateFile."));
             }
 
             try
@@ -141,7 +141,7 @@ namespace Server.Services
             if (principal == null || !principal.IsInRole(Permission.Change))
             {
                 LogFailure(user, "CreateFolder requires Change permission.");
-                throw new FaultException<SecurityException>(new SecurityException($"User {user} is not authorized for CreateFolder."));
+                throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for CreateFolder."));
             }
 
             try
@@ -174,7 +174,7 @@ namespace Server.Services
             if (principal == null || !principal.IsInRole(Permission.Delete))
             {
                 LogFailure(user, "Delete requires Delete permission.");
-                throw new FaultException<SecurityException>(new SecurityException($"User {user} is not authorized for Delete."));
+                throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for Delete."));
             }
 
             try
@@ -223,7 +223,7 @@ namespace Server.Services
             if (principal == null || !principal.IsInRole(Permission.Change))
             {
                 LogFailure(user, "MoveTo requires Change permission.");
-                throw new FaultException<SecurityException>(new SecurityException($"User {user} is not authorized for MoveTo."));
+                throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for MoveTo."));
             }
 
             try
@@ -290,7 +290,7 @@ namespace Server.Services
             if (principal == null || !principal.IsInRole(Permission.See))
             {
                 LogFailure(user, "ReadFile requires See permission.");
-                throw new FaultException<SecurityException>(new SecurityException($"User {user} is not authorized for ReadFile."));
+                throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for ReadFile."));
             }
 
             try
@@ -332,7 +332,7 @@ namespace Server.Services
             if (principal == null || !principal.IsInRole(Permission.See))
             {
                 LogFailure(user, "ShowFolderContent requires See permission.");
-                throw new FaultException<SecurityException>(new SecurityException($"User {user} is not authorized for ShowFolderContent."));
+                throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for ShowFolderContent."));
             }
 
             try

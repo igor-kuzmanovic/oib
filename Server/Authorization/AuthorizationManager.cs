@@ -8,9 +8,23 @@ namespace Server.Authorization
     {
         protected override bool CheckAccessCore(OperationContext operationContext)
         {
-            Principal principal = operationContext.ServiceSecurityContext.AuthorizationContext.Properties["Principal"] as Principal;
+            Console.WriteLine("[AuthorizationManager] 'CheckAccessCore' called");
 
-            return principal != null && principal.IsInRole(Permission.See);
+            Principal principal = operationContext.ServiceSecurityContext.AuthorizationContext.Properties["Principal"] as Principal;
+            if (principal == null)
+            {
+                Console.WriteLine("[AuthorizationManager] There is no principal");
+                return false;
+            }
+
+            if (!principal.IsInRole(Permission.See))
+            {
+                Console.WriteLine($"[AuthorizationManager] Principal has no permission {Permission.See}");
+                return false;
+            }
+
+            Console.WriteLine($"[AuthorizationManager] 'CheckAccessCore' success");
+            return true;
         }
     }
 }

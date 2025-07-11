@@ -1,11 +1,10 @@
-using System;
-using System.ServiceModel;
-using System.Threading;
+using Client.Infrastructure;
+using Contracts.Exceptions;
 using Contracts.Interfaces;
 using Contracts.Models;
-using Contracts.Exceptions;
-using Contracts.Authorization;
-using Client.Infrastructure;
+using System;
+using System.Security.Principal;
+using System.ServiceModel;
 
 namespace Client.Services
 {
@@ -15,25 +14,17 @@ namespace Client.Services
         private readonly EndpointAddress primaryAddress;
         private readonly EndpointAddress backupAddress;
 
-        private IWCFService serviceProxy;
+        private IFileWCFService serviceProxy;
         private bool usingPrimaryServer = true;
-
-        private readonly int maxRetryCount = 3;
-        private readonly int retryDelayMs = 1000;
-        private int retryCount = 0;
 
         public FileServiceClient()
         {
             binding = new NetTcpBinding();
-    
-            binding.OpenTimeout = TimeSpan.FromSeconds(3);
-            binding.SendTimeout = TimeSpan.FromSeconds(5);
-            binding.ReceiveTimeout = TimeSpan.FromSeconds(10);
 
             binding.Security.Mode = SecurityMode.Transport;
             binding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Windows;
             binding.Security.Transport.ProtectionLevel = System.Net.Security.ProtectionLevel.EncryptAndSign;
-    
+
             primaryAddress = new EndpointAddress(new Uri(Configuration.PrimaryServerAddress));
             backupAddress = new EndpointAddress(new Uri(Configuration.BackupServerAddress));
 
@@ -42,192 +33,77 @@ namespace Client.Services
 
         private void CreateServiceProxy()
         {
-            try
-            {
-                ChannelFactory<IWCFService> factory = new ChannelFactory<IWCFService>(
-                    binding, usingPrimaryServer ? primaryAddress : backupAddress);
+            var factory = new ChannelFactory<IFileWCFService>(binding, usingPrimaryServer ? primaryAddress : backupAddress);
+            factory.Credentials.Windows.AllowedImpersonationLevel = TokenImpersonationLevel.Impersonation; // Allows impersonation
+            serviceProxy = factory.CreateChannel();
 
-                serviceProxy = factory.CreateChannel();
-
-                Console.WriteLine($"Connected to {(usingPrimaryServer ? "primary" : "backup")} server at {GetCurrentServerAddress()}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error creating service proxy: {ex.Message}");
-                throw;
-            }
+            Console.WriteLine($"Connected to {(usingPrimaryServer ? "primary" : "backup")} server at {GetCurrentServerAddress()}");
         }
 
-        private void RecreateChannel()
+        private void SwitchServer()
         {
+            DisposeChannel();
+            usingPrimaryServer = !usingPrimaryServer;
+            CreateServiceProxy();
+        }
+
+        private void DisposeChannel()
+        {
+            if (serviceProxy == null) return;
+
             try
             {
-                if (serviceProxy != null)
-                {
-                    try
-                    {
-                        ((ICommunicationObject)serviceProxy).Abort();
-                    }
-                    catch
-                    {
-                    }
-                }
-
-                CreateServiceProxy();
+                ((ICommunicationObject)serviceProxy).Close();
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"Error recreating channel: {ex.Message}");
-
-
-                if (usingPrimaryServer)
-                {
-                    SwitchToBackupServer();
-                }
-                else
-                {
-                    SwitchToPrimaryServer();
-                }
+                ((ICommunicationObject)serviceProxy).Abort();
             }
+
+            serviceProxy = null;
         }
 
         private T ExecuteWithFailover<T>(Func<T> operation, string operationName)
         {
             try
             {
-                retryCount = 0;
-                return TryExecute(operation, operationName);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Fatal error in '{operationName}': {ex.Message}");
-                throw;
-            }
-        }
-
-        private T TryExecute<T>(Func<T> operation, string operationName)
-        {
-            try
-            {
-                if (serviceProxy != null && ((ICommunicationObject)serviceProxy).State == CommunicationState.Faulted)
-                {
-                    Console.WriteLine("Communication channel is faulted. Recreating channel...");
-                    RecreateChannel();
-                }
-
+                if (IsChannelFaulted()) CreateServiceProxy();
                 return operation();
             }
-            catch (FaultException<SecurityException> ex)
+            catch (FaultException<FileSecurityException> ex)
             {
-                Console.WriteLine($"Security error in '{operationName}': {ex.Message}");
+                Console.WriteLine($"Security error in '{operationName}': {ex.Detail.Message}");
                 return default;
             }
             catch (FaultException<FileSystemException> ex)
             {
-                Console.WriteLine($"File system error in '{operationName}': {ex.Message}");
+                Console.WriteLine($"File system error in '{operationName}': {ex.Detail.Message}");
                 return default;
             }
-            catch (FaultException ex)
+            catch (Exception ex)
             {
-                Console.WriteLine($"Fault error in '{operationName}': {ex.Message}");
-                return HandleFailover(operation, operationName, ex);
-            }
-            catch (CommunicationException ex)
-            {
-                Console.WriteLine($"Communication error in '{operationName}': {ex.Message}");
-                return HandleFailover(operation, operationName, ex);
-            }
-            catch (TimeoutException ex)
-            {
-                Console.WriteLine($"Timeout error in '{operationName}': {ex.Message}");
-                return HandleFailover(operation, operationName, ex);
+                Console.WriteLine($"Unexpected error of type {ex.GetType()} in '{operationName}': {ex.Message}. Trying failover.");
+                return RetryOnFailover(operation, operationName);
             }
         }
 
-        private T HandleFailover<T>(Func<T> operation, string operationName, Exception ex)
-        {
-            retryCount++;
-
-            if (retryCount > maxRetryCount)
-            {
-                Console.WriteLine($"Maximum retry count reached for '{operationName}'. Last error: {ex.Message}");
-                throw new FaultException($"Service unavailable after {maxRetryCount} retries: {ex.Message}");
-            }
-
-            Console.WriteLine($"Connection error in '{operationName}': {ex.Message}. Attempt {retryCount} of {maxRetryCount}");
-
-
-            if (usingPrimaryServer)
-            {
-                Console.WriteLine("Switching to backup server...");
-                SwitchToBackupServer();
-            }
-
-            else if (retryCount > 1)
-            {
-                Console.WriteLine("Trying to switch back to primary server...");
-                SwitchToPrimaryServer();
-            }
-
-
-            Thread.Sleep(retryDelayMs);
-
-
-            return TryExecute(operation, operationName);
-        }
-
-        private void SwitchToPrimaryServer()
+        private T RetryOnFailover<T>(Func<T> operation, string operationName)
         {
             try
             {
-                if (serviceProxy != null)
-                {
-                    try
-                    {
-                        ((ICommunicationObject)serviceProxy).Close();
-                    }
-                    catch
-                    {
-                        ((ICommunicationObject)serviceProxy).Abort();
-                    }
-
-                    serviceProxy = null;
-                }
-
-                usingPrimaryServer = true;
-                CreateServiceProxy();
+                SwitchServer();
+                return operation();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to switch to primary server: {ex.Message}");
+                Console.WriteLine($"Failover failed in '{operationName}': {ex.Message}");
+                throw;
             }
         }
 
-        private void SwitchToBackupServer()
+        private bool IsChannelFaulted()
         {
-            try
-            {
-                if (serviceProxy != null)
-                {
-                    try
-                    {
-                        ((ICommunicationObject)serviceProxy).Close();
-                    }
-                    catch
-                    {
-                        ((ICommunicationObject)serviceProxy).Abort();
-                    }
-
-                    serviceProxy = null;
-                }
-
-                usingPrimaryServer = false;
-                CreateServiceProxy();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to switch to backup server: {ex.Message}");
-            }
+            return serviceProxy != null && ((ICommunicationObject)serviceProxy).State == CommunicationState.Faulted;
         }
 
         public string[] ShowFolderContent(string path)
@@ -302,19 +178,7 @@ namespace Client.Services
 
         public void Dispose()
         {
-            if (serviceProxy != null)
-            {
-                try
-                {
-                    ((ICommunicationObject)serviceProxy).Close();
-                }
-                catch
-                {
-                    ((ICommunicationObject)serviceProxy).Abort();
-                }
-
-                serviceProxy = null;
-            }
+            DisposeChannel();
         }
     }
 }

@@ -12,9 +12,10 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
-		CHECKLIST.md = CHECKLIST.md
 		Projektni zadatak - Datoteke.pdf = Projektni zadatak - Datoteke.pdf
 		README.md = README.md
+		run-client.ps1 = run-client.ps1
+		run-server.ps1 = run-server.ps1
 	EndProjectSection
 EndProject
 Global
@@ -35,10 +36,6 @@ Global
 		{61F1B185-0419-4598-8F69-D678C9397818}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{61F1B185-0419-4598-8F69-D678C9397818}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{61F1B185-0419-4598-8F69-D678C9397818}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FB3196A3-4542-4BB5-B01A-D3176A625F94}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FB3196A3-4542-4BB5-B01A-D3176A625F94}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FB3196A3-4542-4BB5-B01A-D3176A625F94}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FB3196A3-4542-4BB5-B01A-D3176A625F94}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

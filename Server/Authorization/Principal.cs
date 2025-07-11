@@ -1,8 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Security.Principal;
 using Contracts.Authorization;
 using Contracts.Helpers;
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Security.Principal;
 
 namespace Server.Authorization
 {
@@ -23,29 +24,67 @@ namespace Server.Authorization
 
         private void LoadRoles()
         {
-            string parsedName = SecurityHelper.GetName(identity);
-            if (RolesConfig.GetPermissions(parsedName, out Permission[] permissions))
+            Console.WriteLine("[Principal] 'LoadRoles' called");
+
+            List<Role> roles = new List<Role>();
+            foreach (var group in identity.Groups)
             {
-                foreach (Permission permission in permissions)
+                try
                 {
-                    this.permissions.Add(permission);
+                    var name = SecurityHelper.ParseName(group.Translate(typeof(NTAccount))?.Value);
+                    if (!string.IsNullOrEmpty(name) && Role.TryParse(name, out Role role))
+                        roles.Add(role);
                 }
+                catch { }
             }
+
+            if (!RolesConfig.GetPermissions(roles, out Permission[] permissions))
+            {
+                Console.WriteLine($"[Principal] No permissions found for roles: {string.Join(", ", roles)}");
+                return;
+            }
+
+            foreach (Permission permission in permissions)
+            {
+                Console.WriteLine($"[Principal] Adding permission: {permission}");
+                this.permissions.Add(permission);
+            }
+
+            Console.WriteLine("[Principal] 'LoadRoles' success");
         }
 
         public bool IsInRole(Permission permission)
         {
-            return permissions.Contains(permission);
+            Console.WriteLine($"[Principal] 'IsInRole' called with permission: {permission}");
+
+            if (!permissions.Contains(permission))
+            {
+                Console.WriteLine($"[Principal] Permission {permission} not found in {string.Join(", ", permissions)}");
+                return false;
+            }
+
+            Console.WriteLine($"[Principal] 'IsInRole' success with permission: {permission}");
+            return true;
         }
 
         public bool IsInRole(string role)
         {
-            if (Enum.TryParse(role, out Permission parsedRole))
+            Console.WriteLine($"[Principal] 'IsInRole' called with role: {role}");
+
+            if (!Enum.TryParse(role, out Permission parsedRole))
             {
-                return permissions.Contains(parsedRole);
+                Console.WriteLine($"[Principal] Failed to parse role: {role}");
+                return false;
             }
 
-            return false;
+            if (!permissions.Contains(parsedRole))
+            {
+                Console.WriteLine($"[Principal] Role {parsedRole} not found in {string.Join(", ", permissions)}");
+                return false;
+            }
+
+            Console.WriteLine($"[Principal] 'IsInRole' success with role: {role}");
+            return true;
         }
     }
 }
