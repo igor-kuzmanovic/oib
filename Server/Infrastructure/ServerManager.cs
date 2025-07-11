@@ -18,7 +18,11 @@ namespace Server.Infrastructure
 
         public void StartServer()
         {
-            serverRole = ServerRoleDetector.IsPrimaryPortAvailable(Configuration.PrimaryServerAddress);
+            serverRole = 
+                ServerRoleHelper.IsPortAvailable(Configuration.PrimaryServerAddress) 
+                || ServerRoleHelper.IsPortAvailable(Configuration.BackupServerAddress) 
+                ? ServerRole.Primary
+                : ServerRole.Backup;
             if (serverRole == ServerRole.Primary)
             {
                 fileAddress = Configuration.PrimaryServerAddress;
@@ -35,21 +39,6 @@ namespace Server.Infrastructure
             serverInstance.Start();
 
             Console.WriteLine($"Initial server role: {serverRole.ToString().ToLower()}");
-            if (serverInstance.IsFileHostRunning())
-            {
-                Console.WriteLine($"File server running on: {fileAddress}");
-            } else
-            {
-                Console.WriteLine($"File server not running");
-            }
-            if (serverInstance.IsSyncHostRunning())
-            {
-                Console.WriteLine($"Sync server running on: {syncAddress}");
-            }
-            else
-            {
-                Console.WriteLine($"Sync server not running");
-            }
         }
 
         public void ShutdownServer()

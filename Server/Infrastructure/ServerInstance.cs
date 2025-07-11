@@ -49,17 +49,8 @@ namespace Server.Infrastructure
             }
             else
             {
-                BecomeBackup(GetRemoteServerCN(remoteSyncAddress));
+                BecomeBackup(ServerRoleHelper.GetRemoteServerCN(remoteSyncAddress));
             }
-        }
-
-        private string GetRemoteServerCN(string address)
-        {
-            if (address.IndexOf("Primary", StringComparison.OrdinalIgnoreCase) >= 0)
-                return "FileServerPrimary";
-            if (address.IndexOf("Backup", StringComparison.OrdinalIgnoreCase) >= 0)
-                return "FileServerBackup";
-            return "FileServerPrimary";
         }
 
         private void BecomePrimary()
@@ -68,6 +59,22 @@ namespace Server.Infrastructure
             StartPrimaryHosts();
             AuditFacade.ServerStarted(fileAddress);
             Console.WriteLine("Promoted to primary. Service hosts started.");
+            if (IsFileHostRunning())
+            {
+                Console.WriteLine($"File server running on: {fileAddress}");
+            }
+            else
+            {
+                Console.WriteLine($"File server not running");
+            }
+            if (IsSyncHostRunning())
+            {
+                Console.WriteLine($"Sync server running on: {syncAddress}");
+            }
+            else
+            {
+                Console.WriteLine($"Sync server not running");
+            }
         }
 
         private void BecomeBackup(string remoteServerCN)

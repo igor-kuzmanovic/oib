@@ -62,7 +62,7 @@
     <Compile Include="Authorization\Principal.cs" />
     <Compile Include="Authorization\ICustomPrincipal.cs" />
     <Compile Include="Authorization\RolesConfig.cs" />
-    <Compile Include="Infrastructure\ServerRoleDetector.cs" />
+    <Compile Include="Infrastructure\ServerRoleHelper.cs" />
     <Compile Include="Infrastructure\Configuration.cs" />
     <Compile Include="Infrastructure\ServerManager.cs" />
     <Compile Include="Infrastructure\ServerInstance.cs" />

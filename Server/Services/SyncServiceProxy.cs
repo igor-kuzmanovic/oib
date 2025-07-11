@@ -28,6 +28,7 @@ namespace Server.Services
             factory.Credentials.ClientCertificate.Certificate = clientCertificate;
             factory.Credentials.ServiceCertificate.Authentication.CertificateValidationMode = System.ServiceModel.Security.X509CertificateValidationMode.ChainTrust;
             factory.Credentials.ServiceCertificate.Authentication.RevocationMode = X509RevocationMode.NoCheck;
+
             proxy = factory.CreateChannel();
         }
 
