@@ -15,10 +15,6 @@ namespace Server.Services
             binding.Security.Mode = SecurityMode.Transport;
             binding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Certificate;
             binding.Security.Transport.ProtectionLevel = System.Net.Security.ProtectionLevel.EncryptAndSign;
-            binding.OpenTimeout = TimeSpan.FromSeconds(1);
-            binding.CloseTimeout = TimeSpan.FromSeconds(1);
-            binding.ReceiveTimeout = TimeSpan.FromSeconds(2);
-            binding.SendTimeout = TimeSpan.FromSeconds(2);
 
             var endpointAddress = new EndpointAddress(
                 new Uri(address),

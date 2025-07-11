@@ -121,10 +121,6 @@ namespace Server.Infrastructure
             fileBinding.Security.Mode = SecurityMode.Transport;
             fileBinding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Windows;
             fileBinding.Security.Transport.ProtectionLevel = System.Net.Security.ProtectionLevel.EncryptAndSign;
-            fileBinding.OpenTimeout = TimeSpan.FromSeconds(1);
-            fileBinding.CloseTimeout = TimeSpan.FromSeconds(1);
-            fileBinding.ReceiveTimeout = TimeSpan.FromSeconds(2);
-            fileBinding.SendTimeout = TimeSpan.FromSeconds(2);
 
             fileHost = new ServiceHost(typeof(FileWCFService));
             fileHost.AddServiceEndpoint(typeof(IFileWCFService), fileBinding, fileAddress);
