@@ -40,7 +40,19 @@ namespace Server.Services
 
         public bool Ping()
         {
-            return proxy.Ping();
+            try
+            {
+                return proxy.Ping();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[SyncServiceProxy] Exception in Ping: {ex.GetType().Name}: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"[SyncServiceProxy] Inner Exception: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}");
+                }
+                return false;
+            }
         }
 
         public void Dispose()

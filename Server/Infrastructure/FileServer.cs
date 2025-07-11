@@ -28,7 +28,7 @@ namespace Server.Infrastructure
         private readonly X509Certificate2 serverCertificate;
         private readonly X509Certificate2 remoteServerCertificate;
         private readonly X509Certificate2 clientCertificate;
-        private bool isRunning;
+        private bool isPrimaryActive;
         private bool isBackupActive;
 
         public FileServer()
@@ -38,13 +38,13 @@ namespace Server.Infrastructure
                 throw new ApplicationException("Local server/client certificate not found or invalid.");
 
             string currentCN = SecurityHelper.GetName(serverCertificate);
+            Console.WriteLine($"Loaded local certificate CN: {currentCN}, Thumbprint: {serverCertificate.Thumbprint}");
+
             string remoteCN = currentCN == Configuration.PrimaryServerCN ? Configuration.BackupServerCN : Configuration.PrimaryServerCN;
             remoteServerCertificate = SecurityHelper.GetCertificate(StoreName.TrustedPeople, StoreLocation.LocalMachine, remoteCN);
             if (remoteServerCertificate == null)
                 throw new ApplicationException($"Remote certificate '{remoteCN}' not found or invalid.");
-
-            Console.WriteLine($"Loaded local certificate CN: {currentCN}");
-            Console.WriteLine($"Expected remote certificate CN: {remoteCN}");
+            Console.WriteLine($"Expected remote certificate CN: {remoteCN}, Thumbprint: {remoteServerCertificate.Thumbprint}");
 
             bool primaryUp = !IsPortAvailable(new Uri(Configuration.PrimaryServerSyncAddress).Port);
             bool backupUp = !IsPortAvailable(new Uri(Configuration.BackupServerSyncAddress).Port);
@@ -56,12 +56,14 @@ namespace Server.Infrastructure
                 role = ServerRole.Backup;
                 if (primaryUp)
                 {
+                    Console.WriteLine("Primary server is up, configuring as backup.");
                     fileAddress = Configuration.BackupServerAddress;
                     syncAddress = Configuration.BackupServerSyncAddress;
                     remoteSyncAddress = Configuration.PrimaryServerSyncAddress;
                 }
                 else
                 {
+                    Console.WriteLine("Backup server is up, configuring as primary.");
                     fileAddress = Configuration.PrimaryServerAddress;
                     syncAddress = Configuration.PrimaryServerSyncAddress;
                     remoteSyncAddress = Configuration.BackupServerSyncAddress;
@@ -69,6 +71,7 @@ namespace Server.Infrastructure
             }
             else
             {
+                Console.WriteLine("No active servers found, configuring as primary.");
                 role = ServerRole.Primary;
                 fileAddress = Configuration.PrimaryServerAddress;
                 syncAddress = Configuration.PrimaryServerSyncAddress;
@@ -78,10 +81,9 @@ namespace Server.Infrastructure
 
         public void Start()
         {
-            isRunning = true;
-            StartPrimary();
-
-            if (role == ServerRole.Backup)
+            if (role == ServerRole.Primary)
+                StartPrimary();
+            else
                 StartBackup();
 
             Console.WriteLine($"Server started as {role}");
@@ -89,6 +91,7 @@ namespace Server.Infrastructure
 
         private void StartPrimary()
         {
+            isPrimaryActive = true;
             StartFileHost();
             StartSyncHost();
         }
@@ -171,7 +174,7 @@ namespace Server.Infrastructure
         private void StartBackup()
         {
             isBackupActive = true;
-            backupTimer = new Timer(_ => CheckPrimary(), null, 1000, 1000);
+            backupTimer = new Timer(_ => CheckPrimary(), null, 5000, 5000);
         }
 
         private void CheckPrimary()
@@ -190,8 +193,13 @@ namespace Server.Infrastructure
                         remoteIsUp = proxy.Ping();
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Console.WriteLine($"[FileServer] Exception in CheckPrimary: {ex.GetType().Name}: {ex.Message}");
+                    if (ex.InnerException != null)
+                    {
+                        Console.WriteLine($"[FileServer] Inner Exception: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}");
+                    }
                     remoteIsUp = false;
                 }
 
@@ -199,11 +207,12 @@ namespace Server.Infrastructure
                 {
                     Console.WriteLine("Remote server down. Promoting to primary...");
                     isBackupActive = false;
-                    backupTimer?.Dispose();
-                    backupTimer = null;
                     role = ServerRole.Primary;
                     StartPrimary();
-                    Console.WriteLine($"Server switched to PRIMARY role at {DateTime.Now}");
+                    Console.WriteLine($"Server switched to PRIMARY role");
+                    backupTimer?.Dispose();
+                    backupTimer = null;
+                    Console.WriteLine("Backup timer disposed");
                 }
             }
         }
@@ -229,7 +238,7 @@ namespace Server.Infrastructure
 
         public void Stop()
         {
-            if (!isRunning)
+            if (!isPrimaryActive)
                 return;
 
             Console.WriteLine("[FileServer] Stopping server...");
@@ -292,7 +301,7 @@ namespace Server.Infrastructure
                 }
             }
 
-            isRunning = false;
+            isPrimaryActive = false;
 
             Console.WriteLine("[FileServer] Server stopped.");
         }
