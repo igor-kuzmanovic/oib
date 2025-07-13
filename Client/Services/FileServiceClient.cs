@@ -23,7 +23,6 @@ namespace Client.Services
 
             binding.Security.Mode = SecurityMode.Transport;
             binding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Windows;
-            binding.Security.Transport.ProtectionLevel = System.Net.Security.ProtectionLevel.EncryptAndSign;
 
             primaryAddress = new EndpointAddress(new Uri(Configuration.PrimaryServerAddress));
             backupAddress = new EndpointAddress(new Uri(Configuration.BackupServerAddress));
@@ -34,7 +33,7 @@ namespace Client.Services
         private void CreateServiceProxy()
         {
             var factory = new ChannelFactory<IFileWCFService>(binding, usingPrimaryServer ? primaryAddress : backupAddress);
-            factory.Credentials.Windows.AllowedImpersonationLevel = TokenImpersonationLevel.Impersonation; // Allows impersonation
+            factory.Credentials.Windows.AllowedImpersonationLevel = TokenImpersonationLevel.Delegation; // Allows impersonation
             serviceProxy = factory.CreateChannel();
 
             Console.WriteLine($"Connected to {(usingPrimaryServer ? "primary" : "backup")} server at {GetCurrentServerAddress()}");

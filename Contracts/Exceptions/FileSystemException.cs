@@ -5,10 +5,8 @@ namespace Contracts.Exceptions
     [DataContract]
     public class FileSystemException
     {
-        string message;
-
         [DataMember]
-        public string Message { get => message; set => message = value; }
+        public string Message { get; set; }
 
         public FileSystemException(string message)
         {

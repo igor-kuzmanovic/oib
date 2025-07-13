@@ -38,7 +38,6 @@ namespace Server.Infrastructure
                     Mode = SecurityMode.Transport,
                     Transport = {
                         ClientCredentialType = TcpClientCredentialType.Windows,
-                        ProtectionLevel = System.Net.Security.ProtectionLevel.EncryptAndSign
                     }
                 }
             };
@@ -65,24 +64,25 @@ namespace Server.Infrastructure
             }
         }
 
+        // TODO Fix certificates
         private void StartSyncHost()
         {
             var syncBinding = new NetTcpBinding
             {
-                Security = {
-                    Mode = SecurityMode.Transport,
-                    Transport = {
-                        ClientCredentialType = TcpClientCredentialType.Certificate,
-                    }
-                }
+                //Security = {
+                //    Mode = SecurityMode.Transport,
+                //    Transport = {
+                //        ClientCredentialType = TcpClientCredentialType.Certificate,
+                //    }
+                //}
             };
 
             syncHost = new ServiceHost(typeof(SyncWCFService));
             syncHost.AddServiceEndpoint(typeof(ISyncWCFService), syncBinding, syncAddress);
 
-            syncHost.Credentials.ServiceCertificate.Certificate = serverCertificate;
-            syncHost.Credentials.ClientCertificate.Authentication.CertificateValidationMode = X509CertificateValidationMode.Custom;
-            syncHost.Credentials.ClientCertificate.Authentication.CustomCertificateValidator = new Server.Authorization.CertificateValidator();
+            //syncHost.Credentials.ServiceCertificate.Certificate = serverCertificate;
+            //syncHost.Credentials.ClientCertificate.Authentication.CertificateValidationMode = X509CertificateValidationMode.Custom;
+            //syncHost.Credentials.ClientCertificate.Authentication.CustomCertificateValidator = new Server.Authorization.CertificateValidator();
 
             try
             {
