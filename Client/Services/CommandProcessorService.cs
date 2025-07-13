@@ -26,7 +26,6 @@ namespace Client.Services
             commandRegistry.RegisterCommand("5", new DeleteItemCommand(fileServiceClient));
             commandRegistry.RegisterCommand("6", new RenameItemCommand(fileServiceClient));
             commandRegistry.RegisterCommand("7", new MoveItemCommand(fileServiceClient));
-            commandRegistry.RegisterCommand("8", new ServerStatusCommand(fileServiceClient));
             commandRegistry.RegisterCommand("0", new ExitCommand(fileServiceClient));
         }
 

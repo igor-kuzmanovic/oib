@@ -17,6 +17,21 @@ namespace Server.Services
 {
     public class FileStorageService : IFileStorageService
     {
+        private FaultException<FileSecurityException> CreateSecurityFault(string message)
+        {
+            return new FaultException<FileSecurityException>(
+                new FileSecurityException(message),
+                new FaultReason(message)
+            );
+        }
+
+        private FaultException<FileSystemException> CreateSystemFault(string message)
+        {
+            return new FaultException<FileSystemException>(
+                new FileSystemException(message),
+                new FaultReason(message)
+            );
+        }
         private readonly string dataDirectory;
 
         public FileStorageService()
@@ -90,7 +105,7 @@ namespace Server.Services
             if (principal == null || !principal.IsInRole(Permission.Change))
             {
                 LogFailure(user, "CreateFile requires Change permission.");
-                throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for CreateFile."));
+                throw CreateSecurityFault($"User {user} is not authorized for CreateFile.");
             }
 
             try
@@ -98,17 +113,17 @@ namespace Server.Services
                 if (!path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
                 {
                     LogFailure(user, "Only .txt files are supported.");
-                    throw new FaultException<FileSystemException>(new FileSystemException("Only .txt files are supported."));
+                    throw CreateSystemFault("Only .txt files are supported.");
                 }
                 if (fileData == null || fileData.Content == null || fileData.InitializationVector == null)
                 {
                     LogFailure(user, "CreateFile received null or incomplete FileData.");
-                    throw new FaultException<FileSystemException>(new FileSystemException("FileData or its properties cannot be null."));
+                    throw CreateSystemFault("FileData or its properties cannot be null.");
                 }
                 if (File.Exists(path))
                 {
                     LogFailure(user, $"File already exists: {path}");
-                    throw new FaultException<FileSystemException>(new FileSystemException($"File already exists: {path}"));
+                    throw CreateSystemFault($"File already exists: {path}");
                 }
 
                 byte[] decryptedContent = EncryptionHelper.DecryptContent(fileData);
@@ -119,7 +134,7 @@ namespace Server.Services
                 if (identity == null)
                 {
                     LogFailure(user, "WindowsIdentity is null. Cannot impersonate.");
-                    throw new FaultException<FileSecurityException>(new FileSecurityException("WindowsIdentity is null. Cannot impersonate."));
+                    throw CreateSecurityFault("WindowsIdentity is null. Cannot impersonate.");
                 }
                 Console.WriteLine($"[FileStorageService] Before impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
                 try
@@ -138,7 +153,7 @@ namespace Server.Services
                 catch (Exception ex)
                 {
                     LogFailure(user, $"Impersonation or file operation failed: {ex.Message}");
-                    throw new FaultException<FileSecurityException>(new FileSecurityException($"Impersonation or file operation failed: {ex.Message}"));
+                    throw CreateSecurityFault($"Impersonation or file operation failed: {ex.Message}");
                 }
 
                 string serverAddress = GetServerAddress();
@@ -149,7 +164,7 @@ namespace Server.Services
             catch (Exception ex)
             {
                 LogFailure(user, $"Exception in CreateFile: {ex.Message}");
-                throw new FaultException<FileSystemException>(new FileSystemException($"Error while creating file: {ex.Message}"));
+                throw CreateSystemFault($"Error while creating file: {ex.Message}");
             }
         }
 
@@ -161,12 +176,12 @@ namespace Server.Services
             if (principal == null || !principal.IsInRole(Permission.Change))
             {
                 LogFailure(user, "CreateFolder requires Change permission.");
-                throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for CreateFolder."));
+                throw CreateSecurityFault($"User {user} is not authorized for CreateFolder.");
             }
             if (Directory.Exists(path))
             {
                 LogFailure(user, $"Folder already exists: {path}");
-                throw new FaultException<FileSystemException>(new FileSystemException($"Folder already exists: {path}"));
+                throw CreateSystemFault($"Folder already exists: {path}");
             }
 
             try
@@ -178,7 +193,7 @@ namespace Server.Services
                 if (identity == null)
                 {
                     LogFailure(user, "WindowsIdentity is null. Cannot impersonate.");
-                    throw new FaultException<FileSecurityException>(new FileSecurityException("WindowsIdentity is null. Cannot impersonate."));
+                    throw CreateSecurityFault("WindowsIdentity is null. Cannot impersonate.");
                 }
                 Console.WriteLine($"[FileStorageService] Before impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
                 try
@@ -192,7 +207,7 @@ namespace Server.Services
                 catch (Exception ex)
                 {
                     LogFailure(user, $"Impersonation or folder creation failed: {ex.Message}");
-                    throw new FaultException<FileSecurityException>(new FileSecurityException($"Impersonation or folder creation failed: {ex.Message}"));
+                    throw CreateSecurityFault($"Impersonation or folder creation failed: {ex.Message}");
                 }
 
                 string serverAddress = GetServerAddress();
@@ -203,7 +218,7 @@ namespace Server.Services
             catch (Exception ex)
             {
                 LogFailure(user, $"Exception in CreateFolder: {ex.Message}");
-                throw new FaultException<FileSystemException>(new FileSystemException($"Error while creating folder: {ex.Message}"));
+                throw CreateSystemFault($"Error while creating folder: {ex.Message}");
             }
         }
 
@@ -215,7 +230,7 @@ namespace Server.Services
             if (principal == null || !principal.IsInRole(Permission.Delete))
             {
                 LogFailure(user, "Delete requires Delete permission.");
-                throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for Delete."));
+                throw CreateSecurityFault($"User {user} is not authorized for Delete.");
             }
 
             try
@@ -227,7 +242,7 @@ namespace Server.Services
                 if (identity == null)
                 {
                     LogFailure(user, "WindowsIdentity is null. Cannot impersonate.");
-                    throw new FaultException<FileSecurityException>(new FileSecurityException("WindowsIdentity is null. Cannot impersonate."));
+                    throw CreateSecurityFault("WindowsIdentity is null. Cannot impersonate.");
                 }
                 Console.WriteLine($"[FileStorageService] Before impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
                 try
@@ -252,14 +267,14 @@ namespace Server.Services
                         }
                         else
                         {
-                            throw new FaultException<FileSystemException>(new FileSystemException($"Path not found: {path}"));
+                            throw CreateSystemFault($"Path not found: {path}");
                         }
                     }
                 }
                 catch (Exception ex)
                 {
                     LogFailure(user, $"Impersonation or delete operation failed: {ex.Message}");
-                    throw new FaultException<FileSecurityException>(new FileSecurityException($"Impersonation or delete operation failed: {ex.Message}"));
+                    throw CreateSecurityFault($"Impersonation or delete operation failed: {ex.Message}");
                 }
 
                 LogSuccess(user);
@@ -268,7 +283,7 @@ namespace Server.Services
             catch (Exception ex)
             {
                 LogFailure(user, $"Exception in Delete: {ex.Message}");
-                throw new FaultException<FileSystemException>(new FileSystemException($"Error while deleting: {ex.Message}"));
+                throw CreateSystemFault($"Error while deleting: {ex.Message}");
             }
         }
 
@@ -280,7 +295,7 @@ namespace Server.Services
             if (principal == null || !principal.IsInRole(Permission.Change))
             {
                 LogFailure(user, "MoveTo requires Change permission.");
-                throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for MoveTo."));
+                throw CreateSecurityFault($"User {user} is not authorized for MoveTo.");
             }
 
             try
@@ -293,7 +308,7 @@ namespace Server.Services
                 if (identity == null)
                 {
                     LogFailure(user, "WindowsIdentity is null. Cannot impersonate.");
-                    throw new FaultException<FileSecurityException>(new FileSecurityException("WindowsIdentity is null. Cannot impersonate."));
+                    throw CreateSecurityFault("WindowsIdentity is null. Cannot impersonate.");
                 }
                 Console.WriteLine($"[FileStorageService] Before impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
                 try
@@ -330,14 +345,14 @@ namespace Server.Services
                         }
                         else
                         {
-                            throw new FaultException<FileSystemException>(new FileSystemException($"Source file or folder not found: {sourcePath}"));
+                            throw CreateSystemFault($"Source file or folder not found: {sourcePath}");
                         }
                     }
                 }
                 catch (Exception ex)
                 {
                     LogFailure(user, $"Impersonation or move operation failed: {ex.Message}");
-                    throw new FaultException<FileSecurityException>(new FileSecurityException($"Impersonation or move operation failed: {ex.Message}"));
+                    throw CreateSecurityFault($"Impersonation or move operation failed: {ex.Message}");
                 }
 
                 LogSuccess(user);
@@ -346,7 +361,7 @@ namespace Server.Services
             catch (Exception ex)
             {
                 LogFailure(user, $"Exception in MoveTo: {ex.Message}");
-                throw new FaultException<FileSystemException>(new FileSystemException($"Error while moving: {ex.Message}"));
+                throw CreateSystemFault($"Error while moving: {ex.Message}");
             }
         }
 
@@ -363,7 +378,7 @@ namespace Server.Services
             if (principal == null || !principal.IsInRole(Permission.See))
             {
                 LogFailure(user, "ReadFile requires See permission.");
-                throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for ReadFile."));
+                throw CreateSecurityFault($"User {user} is not authorized for ReadFile.");
             }
 
             try
@@ -371,7 +386,7 @@ namespace Server.Services
                 if (!path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
                 {
                     LogFailure(user, "Only .txt files are supported.");
-                    throw new FaultException<FileSystemException>(new FileSystemException("Only .txt files are supported."));
+                    throw CreateSystemFault("Only .txt files are supported.");
                 }
 
                 string resolvedPath = ResolvePath(path);
@@ -379,7 +394,7 @@ namespace Server.Services
                 if (!File.Exists(resolvedPath))
                 {
                     LogFailure(user, $"File not found: {path}");
-                    throw new FaultException<FileSystemException>(new FileSystemException($"File not found: {path}"));
+                    throw CreateSystemFault($"File not found: {path}");
                 }
                 byte[] fileContent = File.ReadAllBytes(resolvedPath);
                 FileData encryptedData = EncryptionHelper.EncryptContent(fileContent);
@@ -393,7 +408,7 @@ namespace Server.Services
             catch (Exception ex)
             {
                 LogFailure(user, $"Exception in ReadFile: {ex.Message}");
-                throw new FaultException<FileSystemException>(new FileSystemException($"Error while reading file: {ex.Message}"));
+                throw CreateSystemFault($"Error while reading file: {ex.Message}");
             }
         }
 
@@ -405,7 +420,7 @@ namespace Server.Services
             if (principal == null || !principal.IsInRole(Permission.See))
             {
                 LogFailure(user, "ShowFolderContent requires See permission.");
-                throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for ShowFolderContent."));
+                throw CreateSecurityFault($"User {user} is not authorized for ShowFolderContent.");
             }
 
             try
@@ -415,7 +430,7 @@ namespace Server.Services
                 if (!Directory.Exists(resolvedPath))
                 {
                     LogFailure(user, $"Folder not found: {path}");
-                    throw new FaultException<FileSystemException>(new FileSystemException($"Folder not found: {path}"));
+                    throw CreateSystemFault($"Folder not found: {path}");
                 }
 
                 var entries = Directory.GetFileSystemEntries(resolvedPath)
@@ -438,7 +453,7 @@ namespace Server.Services
             catch (Exception ex)
             {
                 LogFailure(user, $"Exception in ShowFolderContent: {ex.Message}");
-                throw new FaultException<FileSystemException>(new FileSystemException($"Error while showing folder content: {ex.Message}"));
+                throw CreateSystemFault($"Error while showing folder content: {ex.Message}");
             }
         }
 
@@ -448,7 +463,7 @@ namespace Server.Services
 
             if (!safePath.StartsWith(dataDirectory))
             {
-                throw new FaultException<FileSystemException>(new FileSystemException("Access to paths outside the data directory is not allowed."));
+                throw CreateSystemFault("Access to paths outside the data directory is not allowed.");
             }
 
             return safePath;

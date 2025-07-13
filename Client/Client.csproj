@@ -59,7 +59,6 @@
     <Compile Include="Commands\MoveItemCommand.cs" />
     <Compile Include="Commands\ReadFileCommand.cs" />
     <Compile Include="Commands\RenameItemCommand.cs" />
-    <Compile Include="Commands\ServerStatusCommand.cs" />
     <Compile Include="Infrastructure\Configuration.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
