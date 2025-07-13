@@ -116,15 +116,29 @@ namespace Server.Services
 
                 var identity = GetCallingUserIdentity();
                 Console.WriteLine($"[FileStorageService] 'CreateFile' impersonating user: {user}");
-                using (var context = identity.Impersonate())
+                if (identity == null)
                 {
-                    string directory = Path.GetDirectoryName(resolvedPath);
-                    if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                    LogFailure(user, "WindowsIdentity is null. Cannot impersonate.");
+                    throw new FaultException<FileSecurityException>(new FileSecurityException("WindowsIdentity is null. Cannot impersonate."));
+                }
+                Console.WriteLine($"[FileStorageService] Before impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
+                try
+                {
+                    using (var context = identity.Impersonate())
                     {
-                        Directory.CreateDirectory(directory);
+                        Console.WriteLine($"[FileStorageService] After impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
+                        string directory = Path.GetDirectoryName(resolvedPath);
+                        if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                        {
+                            Directory.CreateDirectory(directory);
+                        }
+                        File.WriteAllBytes(resolvedPath, decryptedContent);
                     }
-
-                    File.WriteAllBytes(resolvedPath, decryptedContent);
+                }
+                catch (Exception ex)
+                {
+                    LogFailure(user, $"Impersonation or file operation failed: {ex.Message}");
+                    throw new FaultException<FileSecurityException>(new FileSecurityException($"Impersonation or file operation failed: {ex.Message}"));
                 }
 
                 string serverAddress = GetServerAddress();
@@ -161,9 +175,24 @@ namespace Server.Services
 
                 var identity = GetCallingUserIdentity();
                 Console.WriteLine($"[FileStorageService] 'CreateFolder' impersonating user: {user}");
-                using (var context = identity.Impersonate())
+                if (identity == null)
                 {
-                    Directory.CreateDirectory(resolvedPath);
+                    LogFailure(user, "WindowsIdentity is null. Cannot impersonate.");
+                    throw new FaultException<FileSecurityException>(new FileSecurityException("WindowsIdentity is null. Cannot impersonate."));
+                }
+                Console.WriteLine($"[FileStorageService] Before impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
+                try
+                {
+                    using (var context = identity.Impersonate())
+                    {
+                        Console.WriteLine($"[FileStorageService] After impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
+                        Directory.CreateDirectory(resolvedPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogFailure(user, $"Impersonation or folder creation failed: {ex.Message}");
+                    throw new FaultException<FileSecurityException>(new FileSecurityException($"Impersonation or folder creation failed: {ex.Message}"));
                 }
 
                 string serverAddress = GetServerAddress();
@@ -195,27 +224,42 @@ namespace Server.Services
 
                 var identity = GetCallingUserIdentity();
                 Console.WriteLine($"[FileStorageService] 'Delete' impersonating user: {user}");
-                using (var context = identity.Impersonate())
+                if (identity == null)
                 {
-                    bool isFile = File.Exists(resolvedPath);
-                    bool isDirectory = Directory.Exists(resolvedPath);
+                    LogFailure(user, "WindowsIdentity is null. Cannot impersonate.");
+                    throw new FaultException<FileSecurityException>(new FileSecurityException("WindowsIdentity is null. Cannot impersonate."));
+                }
+                Console.WriteLine($"[FileStorageService] Before impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
+                try
+                {
+                    using (var context = identity.Impersonate())
+                    {
+                        Console.WriteLine($"[FileStorageService] After impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
+                        bool isFile = File.Exists(resolvedPath);
+                        bool isDirectory = Directory.Exists(resolvedPath);
 
-                    if (isFile)
-                    {
-                        File.Delete(resolvedPath);
-                        string serverAddress = GetServerAddress();
-                        AuditFacade.FileDeleted(user, path, serverAddress);
+                        if (isFile)
+                        {
+                            File.Delete(resolvedPath);
+                            string serverAddress = GetServerAddress();
+                            AuditFacade.FileDeleted(user, path, serverAddress);
+                        }
+                        else if (isDirectory)
+                        {
+                            Directory.Delete(resolvedPath, true);
+                            string serverAddress = GetServerAddress();
+                            AuditFacade.FolderDeleted(user, path, serverAddress);
+                        }
+                        else
+                        {
+                            throw new FaultException<FileSystemException>(new FileSystemException($"Path not found: {path}"));
+                        }
                     }
-                    else if (isDirectory)
-                    {
-                        Directory.Delete(resolvedPath, true);
-                        string serverAddress = GetServerAddress();
-                        AuditFacade.FolderDeleted(user, path, serverAddress);
-                    }
-                    else
-                    {
-                        throw new FaultException<FileSystemException>(new FileSystemException($"Path not found: {path}"));
-                    }
+                }
+                catch (Exception ex)
+                {
+                    LogFailure(user, $"Impersonation or delete operation failed: {ex.Message}");
+                    throw new FaultException<FileSecurityException>(new FileSecurityException($"Impersonation or delete operation failed: {ex.Message}"));
                 }
 
                 LogSuccess(user);
@@ -246,39 +290,54 @@ namespace Server.Services
 
                 var identity = GetCallingUserIdentity();
                 Console.WriteLine($"[FileStorageService] 'MoveTo' impersonating user: {user}");
-                using (var context = identity.Impersonate())
+                if (identity == null)
                 {
-                    bool isFile = File.Exists(resolvedSourcePath);
-                    bool isDirectory = Directory.Exists(resolvedSourcePath);
-
-                    if (isFile)
+                    LogFailure(user, "WindowsIdentity is null. Cannot impersonate.");
+                    throw new FaultException<FileSecurityException>(new FileSecurityException("WindowsIdentity is null. Cannot impersonate."));
+                }
+                Console.WriteLine($"[FileStorageService] Before impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
+                try
+                {
+                    using (var context = identity.Impersonate())
                     {
-                        string destDir = Path.GetDirectoryName(resolvedDestinationPath);
-                        if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
+                        Console.WriteLine($"[FileStorageService] After impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
+                        bool isFile = File.Exists(resolvedSourcePath);
+                        bool isDirectory = Directory.Exists(resolvedSourcePath);
+
+                        if (isFile)
                         {
-                            Directory.CreateDirectory(destDir);
-                        }
+                            string destDir = Path.GetDirectoryName(resolvedDestinationPath);
+                            if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
+                            {
+                                Directory.CreateDirectory(destDir);
+                            }
 
-                        File.Move(resolvedSourcePath, resolvedDestinationPath);
-                        string serverAddress = GetServerAddress();
-                        AuditFacade.FileMoved(user, sourcePath, destinationPath, serverAddress);
-                    }
-                    else if (isDirectory)
-                    {
-                        string destDir = Path.GetDirectoryName(resolvedDestinationPath);
-                        if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
+                            File.Move(resolvedSourcePath, resolvedDestinationPath);
+                            string serverAddress = GetServerAddress();
+                            AuditFacade.FileMoved(user, sourcePath, destinationPath, serverAddress);
+                        }
+                        else if (isDirectory)
                         {
-                            Directory.CreateDirectory(destDir);
-                        }
+                            string destDir = Path.GetDirectoryName(resolvedDestinationPath);
+                            if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
+                            {
+                                Directory.CreateDirectory(destDir);
+                            }
 
-                        Directory.Move(resolvedSourcePath, resolvedDestinationPath);
-                        string serverAddress = GetServerAddress();
-                        AuditFacade.FolderMoved(user, sourcePath, destinationPath, serverAddress);
+                            Directory.Move(resolvedSourcePath, resolvedDestinationPath);
+                            string serverAddress = GetServerAddress();
+                            AuditFacade.FolderMoved(user, sourcePath, destinationPath, serverAddress);
+                        }
+                        else
+                        {
+                            throw new FaultException<FileSystemException>(new FileSystemException($"Source file or folder not found: {sourcePath}"));
+                        }
                     }
-                    else
-                    {
-                        throw new FaultException<FileSystemException>(new FileSystemException($"Source file or folder not found: {sourcePath}"));
-                    }
+                }
+                catch (Exception ex)
+                {
+                    LogFailure(user, $"Impersonation or move operation failed: {ex.Message}");
+                    throw new FaultException<FileSecurityException>(new FileSecurityException($"Impersonation or move operation failed: {ex.Message}"));
                 }
 
                 LogSuccess(user);

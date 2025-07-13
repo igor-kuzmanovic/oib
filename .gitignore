@@ -365,5 +365,10 @@ FodyWeavers.xsd
 # Files directory content
 Files/*
 
-# Certificates directory content
-Certificates/*
+# Exclude run scripts
+!Client/bin/Debug/run_reader.bat
+!Client/bin/Debug/run_editor.bat
+!Client/bin/Debug/run_norole.bat
+!Server/bin/Debug/run_backup.bat
+!Server/bin/Debug/run_invalid.bat
+!Server/bin/Debug/run_primary.bat
