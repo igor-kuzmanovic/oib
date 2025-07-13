@@ -40,8 +40,8 @@ namespace Server.Authorization
                 return false;
             }
 
-            Console.WriteLine("[AuthorizationPolicy] Setting principal");
             Principal principal = new Principal(windowsIdentity);
+            Console.WriteLine($"[AuthorizationPolicy] Setting principal {principal.Identity.Name}");
             evaluationContext.Properties["Principal"] = principal;
 
             Console.WriteLine("[AuthorizationPolicy] 'Evaluate' success");

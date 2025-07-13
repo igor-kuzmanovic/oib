@@ -105,11 +105,17 @@ namespace Server.Services
                     LogFailure(user, "CreateFile received null or incomplete FileData.");
                     throw new FaultException<FileSystemException>(new FileSystemException("FileData or its properties cannot be null."));
                 }
+                if (File.Exists(path))
+                {
+                    LogFailure(user, $"File already exists: {path}");
+                    throw new FaultException<FileSystemException>(new FileSystemException($"File already exists: {path}"));
+                }
 
                 byte[] decryptedContent = EncryptionHelper.DecryptContent(fileData);
                 string resolvedPath = ResolvePath(path);
 
                 var identity = GetCallingUserIdentity();
+                Console.WriteLine($"[FileStorageService] 'CreateFile' impersonating user: {user}");
                 using (var context = identity.Impersonate())
                 {
                     string directory = Path.GetDirectoryName(resolvedPath);
@@ -143,12 +149,18 @@ namespace Server.Services
                 LogFailure(user, "CreateFolder requires Change permission.");
                 throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for CreateFolder."));
             }
+            if (Directory.Exists(path))
+            {
+                LogFailure(user, $"Folder already exists: {path}");
+                throw new FaultException<FileSystemException>(new FileSystemException($"Folder already exists: {path}"));
+            }
 
             try
             {
                 string resolvedPath = ResolvePath(path);
 
                 var identity = GetCallingUserIdentity();
+                Console.WriteLine($"[FileStorageService] 'CreateFolder' impersonating user: {user}");
                 using (var context = identity.Impersonate())
                 {
                     Directory.CreateDirectory(resolvedPath);
@@ -182,6 +194,7 @@ namespace Server.Services
                 string resolvedPath = ResolvePath(path);
 
                 var identity = GetCallingUserIdentity();
+                Console.WriteLine($"[FileStorageService] 'Delete' impersonating user: {user}");
                 using (var context = identity.Impersonate())
                 {
                     bool isFile = File.Exists(resolvedPath);
@@ -232,6 +245,7 @@ namespace Server.Services
                 string resolvedDestinationPath = ResolvePath(destinationPath);
 
                 var identity = GetCallingUserIdentity();
+                Console.WriteLine($"[FileStorageService] 'MoveTo' impersonating user: {user}");
                 using (var context = identity.Impersonate())
                 {
                     bool isFile = File.Exists(resolvedSourcePath);
@@ -394,7 +408,7 @@ namespace Server.Services
             {
                 Console.WriteLine($"Failed to get calling user identity: {ex.Message}");
             }
-            
+
             return WindowsIdentity.GetCurrent();
         }
     }
