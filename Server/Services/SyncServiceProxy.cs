@@ -3,6 +3,7 @@ using System.ServiceModel;
 using System.Security.Cryptography.X509Certificates;
 using System.ServiceModel.Security;
 using Contracts.Helpers;
+using Server.Authorization;
 
 namespace Server.Services
 {
@@ -20,9 +21,9 @@ namespace Server.Services
                     Mode = SecurityMode.Transport,
                     Transport =
                     {
-                        ClientCredentialType = TcpClientCredentialType.Certificate,
+                        ClientCredentialType = TcpClientCredentialType.Certificate
                     }
-                },
+                }
             };
 
             var endpointAddress = new EndpointAddress(
@@ -46,61 +47,37 @@ namespace Server.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[SyncServiceProxy] Exception in Ping: {ex.GetType().Name}: {ex.Message}");
+                Console.WriteLine($"[SyncServiceProxy] Ping failed: {ex.Message}");
                 if (ex.InnerException != null)
-                {
-                    Console.WriteLine($"[SyncServiceProxy] Inner Exception: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}");
-                }
+                    Console.WriteLine($"[SyncServiceProxy] Inner: {ex.InnerException.Message}");
                 return false;
             }
         }
 
         public void Dispose()
         {
-            if (proxy is ICommunicationObject comm)
+            CloseCommunicationObject(proxy);
+            CloseCommunicationObject(factory);
+            proxy = null;
+            factory = null;
+        }
+
+        private void CloseCommunicationObject(object obj)
+        {
+            if (obj is ICommunicationObject comm)
             {
                 try
                 {
                     if (comm.State == CommunicationState.Faulted)
-                    {
-                        Console.WriteLine("[SyncServiceProxy] Proxy faulted. Aborting...");
                         comm.Abort();
-                    }
                     else
-                    {
                         comm.Close();
-                    }
                 }
-                catch (Exception ex)
+                catch
                 {
-                    Console.WriteLine($"[SyncServiceProxy] Exception while disposing proxy: {ex.GetType().Name}: {ex.Message}");
                     comm.Abort();
                 }
             }
-
-            if (factory != null)
-            {
-                try
-                {
-                    if (factory.State == CommunicationState.Faulted)
-                    {
-                        Console.WriteLine("[SyncServiceProxy] Factory faulted. Aborting...");
-                        factory.Abort();
-                    }
-                    else
-                    {
-                        factory.Close();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[SyncServiceProxy] Exception while disposing factory: {ex.GetType().Name}: {ex.Message}");
-                    factory.Abort();
-                }
-            }
-
-            proxy = null;
-            factory = null;
         }
     }
 }

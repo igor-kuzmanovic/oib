@@ -18,7 +18,13 @@ namespace Server
             {
                 fileServer = new FileServer();
                 fileServer.Start();
+
                 Console.WriteLine("Press Enter to stop the server...");
+                while (!Console.KeyAvailable)
+                {
+                    fileServer.TryPromoteIfPrimaryDown();
+                    System.Threading.Thread.Sleep(1000); // Poll every second
+                }
                 Console.ReadLine();
             }
             catch (ApplicationException ex)
@@ -30,7 +36,6 @@ namespace Server
             finally
             {
                 fileServer?.Dispose();
-
                 Console.WriteLine("Press Enter to exit...");
                 Console.ReadLine();
             }
