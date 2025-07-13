@@ -21,26 +21,31 @@ namespace Server.Services
             return fileStorageService.ReadFile(path);
         }
 
+        [OperationBehavior(Impersonation = ImpersonationOption.Required)]
         public bool CreateFile(string path, FileData fileData)
         {
             return fileStorageService.CreateFile(path, fileData);
         }
 
+        [OperationBehavior(Impersonation = ImpersonationOption.Required)]
         public bool CreateFolder(string path)
         {
             return fileStorageService.CreateFolder(path);
         }
 
+        [OperationBehavior(Impersonation = ImpersonationOption.Required)]
         public bool Delete(string path)
         {
             return fileStorageService.Delete(path);
         }
 
+        [OperationBehavior(Impersonation = ImpersonationOption.Required)]
         public bool Rename(string sourcePath, string destinationPath)
         {
             return fileStorageService.Rename(sourcePath, destinationPath);
         }
 
+        [OperationBehavior(Impersonation = ImpersonationOption.Required)]
         public bool MoveTo(string sourcePath, string destinationPath)
         {
             return fileStorageService.MoveTo(sourcePath, destinationPath);

@@ -17,6 +17,13 @@ namespace Server.Services
 {
     public class FileStorageService : IFileStorageService
     {
+        private readonly string dataDirectory;
+
+        public FileStorageService()
+        {
+            dataDirectory = Configuration.DataDirectory;
+        }
+
         private FaultException<FileSecurityException> CreateSecurityFault(string message)
         {
             return new FaultException<FileSecurityException>(
@@ -32,11 +39,85 @@ namespace Server.Services
                 new FaultReason(message)
             );
         }
-        private readonly string dataDirectory;
 
-        public FileStorageService()
+        private void LogAuthorizationSuccess(string user)
         {
-            dataDirectory = Configuration.DataDirectory;
+            WindowsIdentity.RunImpersonated(WindowsIdentity.GetCurrent().AccessToken, () =>
+            {
+                AuditFacade.AuthorizationSuccess(user, GetAction(), GetServerAddress());
+            });
+        }
+
+        private void LogAuthorizationFailure(string user, string reason)
+        {
+            WindowsIdentity.RunImpersonated(WindowsIdentity.GetCurrent().AccessToken, () =>
+            {
+                AuditFacade.AuthorizationFailed(user, GetAction(), reason, GetServerAddress());
+            });
+        }
+
+        private void LogFileCreated(string user, string path)
+        {
+            WindowsIdentity.RunImpersonated(WindowsIdentity.GetCurrent().AccessToken, () =>
+            {
+                AuditFacade.FileCreated(user, path, GetServerAddress());
+            });
+        }
+
+        private void LogFolderCreated(string user, string path)
+        {
+            WindowsIdentity.RunImpersonated(WindowsIdentity.GetCurrent().AccessToken, () =>
+            {
+                AuditFacade.FolderCreated(user, path, GetServerAddress());
+            });
+        }
+
+        private void LogFileDeleted(string user, string path)
+        {
+            WindowsIdentity.RunImpersonated(WindowsIdentity.GetCurrent().AccessToken, () =>
+            {
+                AuditFacade.FileDeleted(user, path, GetServerAddress());
+            });
+        }
+
+        private void LogFolderDeleted(string user, string path)
+        {
+            WindowsIdentity.RunImpersonated(WindowsIdentity.GetCurrent().AccessToken, () =>
+            {
+                AuditFacade.FolderDeleted(user, path, GetServerAddress());
+            });
+        }
+
+        private void LogFileMoved(string user, string sourcePath, string destinationPath)
+        {
+            WindowsIdentity.RunImpersonated(WindowsIdentity.GetCurrent().AccessToken, () =>
+            {
+                AuditFacade.FileMoved(user, sourcePath, destinationPath, GetServerAddress());
+            });
+        }
+
+        private void LogFolderMoved(string user, string sourcePath, string destinationPath)
+        {
+            WindowsIdentity.RunImpersonated(WindowsIdentity.GetCurrent().AccessToken, () =>
+            {
+                AuditFacade.FolderMoved(user, sourcePath, destinationPath, GetServerAddress());
+            });
+        }
+
+        private void LogFileAccessed(string user, string path)
+        {
+            WindowsIdentity.RunImpersonated(WindowsIdentity.GetCurrent().AccessToken, () =>
+            {
+                AuditFacade.FileAccessed(user, path, GetServerAddress());
+            });
+        }
+
+        private void LogFolderAccessed(string user, string path)
+        {
+            WindowsIdentity.RunImpersonated(WindowsIdentity.GetCurrent().AccessToken, () =>
+            {
+                AuditFacade.FolderAccessed(user, path, GetServerAddress());
+            });
         }
 
         private string GetCurrentUser()
@@ -46,7 +127,6 @@ namespace Server.Services
             {
                 return SecurityHelper.GetName(winIdentity);
             }
-
             return SecurityHelper.ParseName(principal?.Identity?.Name ?? "Unknown");
         }
 
@@ -72,98 +152,81 @@ namespace Server.Services
             return OperationContext.Current?.IncomingMessageHeaders?.Action ?? "UnknownAction";
         }
 
-        private void LogSuccess(string user)
+        private WindowsIdentity GetCallingUserIdentity()
         {
             try
             {
-                string serverAddress = GetServerAddress();
-                AuditFacade.AuthorizationSuccess(user, GetAction(), serverAddress);
+                if (OperationContext.Current?.ServiceSecurityContext?.WindowsIdentity != null)
+                {
+                    return OperationContext.Current.ServiceSecurityContext.WindowsIdentity;
+                }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Console.WriteLine("Audit success log failed: " + e.Message);
+                Console.WriteLine($"Failed to get calling user identity: {ex.Message}");
             }
+            return WindowsIdentity.GetCurrent();
         }
-        private void LogFailure(string user, string reason)
+
+        private string ResolvePath(string relativePath)
         {
-            try
+            string safePath = Path.GetFullPath(Path.Combine(dataDirectory, relativePath.TrimStart(new char[] { '\\', '/' })));
+            if (!safePath.StartsWith(dataDirectory))
             {
-                string serverAddress = GetServerAddress();
-                AuditFacade.AuthorizationFailed(user, GetAction(), reason, serverAddress);
+                throw CreateSystemFault("Access to paths outside the data directory is not allowed.");
             }
-            catch (Exception e)
-            {
-                Console.WriteLine("Audit failure log failed: " + e.Message);
-            }
+            return safePath;
         }
 
         public bool CreateFile(string path, FileData fileData)
         {
             string user = GetCallingUser();
             var principal = Thread.CurrentPrincipal as Principal;
-
             if (principal == null || !principal.IsInRole(Permission.Change))
             {
-                LogFailure(user, "CreateFile requires Change permission.");
+                LogAuthorizationFailure(user, "CreateFile requires Change permission.");
                 throw CreateSecurityFault($"User {user} is not authorized for CreateFile.");
             }
-
             try
             {
                 if (!path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
                 {
-                    LogFailure(user, "Only .txt files are supported.");
+                    LogAuthorizationFailure(user, "Only .txt files are supported.");
                     throw CreateSystemFault("Only .txt files are supported.");
                 }
                 if (fileData == null || fileData.Content == null || fileData.InitializationVector == null)
                 {
-                    LogFailure(user, "CreateFile received null or incomplete FileData.");
+                    LogAuthorizationFailure(user, "CreateFile received null or incomplete FileData.");
                     throw CreateSystemFault("FileData or its properties cannot be null.");
                 }
                 if (File.Exists(path))
                 {
-                    LogFailure(user, $"File already exists: {path}");
+                    LogAuthorizationFailure(user, $"File already exists: {path}");
                     throw CreateSystemFault($"File already exists: {path}");
                 }
-
                 byte[] decryptedContent = EncryptionHelper.DecryptContent(fileData);
                 string resolvedPath = ResolvePath(path);
-
-                var identity = GetCallingUserIdentity();
-                Console.WriteLine($"[FileStorageService] 'CreateFile' impersonating user: {user}");
-                if (identity == null)
-                {
-                    LogFailure(user, "WindowsIdentity is null. Cannot impersonate.");
-                    throw CreateSecurityFault("WindowsIdentity is null. Cannot impersonate.");
-                }
-                Console.WriteLine($"[FileStorageService] Before impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
                 try
                 {
-                    using (var context = identity.Impersonate())
+                    string directory = Path.GetDirectoryName(resolvedPath);
+                    if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                     {
-                        Console.WriteLine($"[FileStorageService] After impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
-                        string directory = Path.GetDirectoryName(resolvedPath);
-                        if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-                        {
-                            Directory.CreateDirectory(directory);
-                        }
-                        File.WriteAllBytes(resolvedPath, decryptedContent);
+                        Directory.CreateDirectory(directory);
                     }
+                    File.WriteAllBytes(resolvedPath, decryptedContent);
                 }
                 catch (Exception ex)
                 {
-                    LogFailure(user, $"Impersonation or file operation failed: {ex.Message}");
-                    throw CreateSecurityFault($"Impersonation or file operation failed: {ex.Message}");
+                    LogAuthorizationFailure(user, $"File operation failed: {ex.Message}");
+                    throw CreateSecurityFault($"File operation failed: {ex.Message}");
                 }
-
-                string serverAddress = GetServerAddress();
-                AuditFacade.FileCreated(user, path, serverAddress);
-                LogSuccess(user);
+                LogFileCreated(user, path);
+                LogAuthorizationSuccess(user);
                 return true;
             }
             catch (Exception ex)
             {
-                LogFailure(user, $"Exception in CreateFile: {ex.Message}");
+                LogAuthorizationFailure(user, $"Exception in CreateFile: {ex.Message}");
                 throw CreateSystemFault($"Error while creating file: {ex.Message}");
             }
         }
@@ -175,12 +238,12 @@ namespace Server.Services
 
             if (principal == null || !principal.IsInRole(Permission.Change))
             {
-                LogFailure(user, "CreateFolder requires Change permission.");
+                LogAuthorizationFailure(user, "CreateFolder requires Change permission.");
                 throw CreateSecurityFault($"User {user} is not authorized for CreateFolder.");
             }
             if (Directory.Exists(path))
             {
-                LogFailure(user, $"Folder already exists: {path}");
+                LogAuthorizationFailure(user, $"Folder already exists: {path}");
                 throw CreateSystemFault($"Folder already exists: {path}");
             }
 
@@ -188,36 +251,23 @@ namespace Server.Services
             {
                 string resolvedPath = ResolvePath(path);
 
-                var identity = GetCallingUserIdentity();
-                Console.WriteLine($"[FileStorageService] 'CreateFolder' impersonating user: {user}");
-                if (identity == null)
-                {
-                    LogFailure(user, "WindowsIdentity is null. Cannot impersonate.");
-                    throw CreateSecurityFault("WindowsIdentity is null. Cannot impersonate.");
-                }
-                Console.WriteLine($"[FileStorageService] Before impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
                 try
                 {
-                    using (var context = identity.Impersonate())
-                    {
-                        Console.WriteLine($"[FileStorageService] After impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
-                        Directory.CreateDirectory(resolvedPath);
-                    }
+                    Directory.CreateDirectory(resolvedPath);
                 }
                 catch (Exception ex)
                 {
-                    LogFailure(user, $"Impersonation or folder creation failed: {ex.Message}");
-                    throw CreateSecurityFault($"Impersonation or folder creation failed: {ex.Message}");
+                    LogAuthorizationFailure(user, $"Folder creation failed: {ex.Message}");
+                    throw CreateSecurityFault($"Folder creation failed: {ex.Message}");
                 }
 
-                string serverAddress = GetServerAddress();
-                AuditFacade.FolderCreated(user, path, serverAddress);
-                LogSuccess(user);
+                LogFolderCreated(user, path);
+                LogAuthorizationSuccess(user);
                 return true;
             }
             catch (Exception ex)
             {
-                LogFailure(user, $"Exception in CreateFolder: {ex.Message}");
+                LogAuthorizationFailure(user, $"Exception in CreateFolder: {ex.Message}");
                 throw CreateSystemFault($"Error while creating folder: {ex.Message}");
             }
         }
@@ -229,7 +279,7 @@ namespace Server.Services
 
             if (principal == null || !principal.IsInRole(Permission.Delete))
             {
-                LogFailure(user, "Delete requires Delete permission.");
+                LogAuthorizationFailure(user, "Delete requires Delete permission.");
                 throw CreateSecurityFault($"User {user} is not authorized for Delete.");
             }
 
@@ -237,52 +287,39 @@ namespace Server.Services
             {
                 string resolvedPath = ResolvePath(path);
 
-                var identity = GetCallingUserIdentity();
-                Console.WriteLine($"[FileStorageService] 'Delete' impersonating user: {user}");
-                if (identity == null)
-                {
-                    LogFailure(user, "WindowsIdentity is null. Cannot impersonate.");
-                    throw CreateSecurityFault("WindowsIdentity is null. Cannot impersonate.");
-                }
-                Console.WriteLine($"[FileStorageService] Before impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
                 try
                 {
-                    using (var context = identity.Impersonate())
-                    {
-                        Console.WriteLine($"[FileStorageService] After impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
-                        bool isFile = File.Exists(resolvedPath);
-                        bool isDirectory = Directory.Exists(resolvedPath);
+                    bool isFile = File.Exists(resolvedPath);
+                    bool isDirectory = Directory.Exists(resolvedPath);
 
-                        if (isFile)
-                        {
-                            File.Delete(resolvedPath);
-                            string serverAddress = GetServerAddress();
-                            AuditFacade.FileDeleted(user, path, serverAddress);
-                        }
-                        else if (isDirectory)
-                        {
-                            Directory.Delete(resolvedPath, true);
-                            string serverAddress = GetServerAddress();
-                            AuditFacade.FolderDeleted(user, path, serverAddress);
-                        }
-                        else
-                        {
-                            throw CreateSystemFault($"Path not found: {path}");
-                        }
+                    if (isFile)
+                    {
+                        File.Delete(resolvedPath);
+                        LogFileDeleted(user, path);
+                    }
+                    else if (isDirectory)
+                    {
+                        Directory.Delete(resolvedPath, true);
+                        LogFolderDeleted(user, path);
+                    }
+                    else
+                    {
+                        LogAuthorizationFailure(user, $"Path not found: {path}");
+                        throw CreateSystemFault($"Path not found: {path}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    LogFailure(user, $"Impersonation or delete operation failed: {ex.Message}");
-                    throw CreateSecurityFault($"Impersonation or delete operation failed: {ex.Message}");
+                    LogAuthorizationFailure(user, $"Delete operation failed: {ex.Message}");
+                    throw CreateSecurityFault($"Delete operation failed: {ex.Message}");
                 }
 
-                LogSuccess(user);
+                LogAuthorizationSuccess(user);
                 return true;
             }
             catch (Exception ex)
             {
-                LogFailure(user, $"Exception in Delete: {ex.Message}");
+                LogAuthorizationFailure(user, $"Exception in Delete: {ex.Message}");
                 throw CreateSystemFault($"Error while deleting: {ex.Message}");
             }
         }
@@ -294,7 +331,7 @@ namespace Server.Services
 
             if (principal == null || !principal.IsInRole(Permission.Change))
             {
-                LogFailure(user, "MoveTo requires Change permission.");
+                LogAuthorizationFailure(user, "MoveTo requires Change permission.");
                 throw CreateSecurityFault($"User {user} is not authorized for MoveTo.");
             }
 
@@ -303,64 +340,51 @@ namespace Server.Services
                 string resolvedSourcePath = ResolvePath(sourcePath);
                 string resolvedDestinationPath = ResolvePath(destinationPath);
 
-                var identity = GetCallingUserIdentity();
-                Console.WriteLine($"[FileStorageService] 'MoveTo' impersonating user: {user}");
-                if (identity == null)
-                {
-                    LogFailure(user, "WindowsIdentity is null. Cannot impersonate.");
-                    throw CreateSecurityFault("WindowsIdentity is null. Cannot impersonate.");
-                }
-                Console.WriteLine($"[FileStorageService] Before impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
                 try
                 {
-                    using (var context = identity.Impersonate())
+                    bool isFile = File.Exists(resolvedSourcePath);
+                    bool isDirectory = Directory.Exists(resolvedSourcePath);
+
+                    if (isFile)
                     {
-                        Console.WriteLine($"[FileStorageService] After impersonation: Process user is '{WindowsIdentity.GetCurrent().Name}'");
-                        bool isFile = File.Exists(resolvedSourcePath);
-                        bool isDirectory = Directory.Exists(resolvedSourcePath);
-
-                        if (isFile)
+                        string destDir = Path.GetDirectoryName(resolvedDestinationPath);
+                        if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
                         {
-                            string destDir = Path.GetDirectoryName(resolvedDestinationPath);
-                            if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
-                            {
-                                Directory.CreateDirectory(destDir);
-                            }
+                            Directory.CreateDirectory(destDir);
+                        }
 
-                            File.Move(resolvedSourcePath, resolvedDestinationPath);
-                            string serverAddress = GetServerAddress();
-                            AuditFacade.FileMoved(user, sourcePath, destinationPath, serverAddress);
-                        }
-                        else if (isDirectory)
+                        File.Move(resolvedSourcePath, resolvedDestinationPath);
+                        LogFileMoved(user, sourcePath, destinationPath);
+                    }
+                    else if (isDirectory)
+                    {
+                        string destDir = Path.GetDirectoryName(resolvedDestinationPath);
+                        if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
                         {
-                            string destDir = Path.GetDirectoryName(resolvedDestinationPath);
-                            if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
-                            {
-                                Directory.CreateDirectory(destDir);
-                            }
+                            Directory.CreateDirectory(destDir);
+                        }
 
-                            Directory.Move(resolvedSourcePath, resolvedDestinationPath);
-                            string serverAddress = GetServerAddress();
-                            AuditFacade.FolderMoved(user, sourcePath, destinationPath, serverAddress);
-                        }
-                        else
-                        {
-                            throw CreateSystemFault($"Source file or folder not found: {sourcePath}");
-                        }
+                        Directory.Move(resolvedSourcePath, resolvedDestinationPath);
+                        LogFolderMoved(user, sourcePath, destinationPath);
+                    }
+                    else
+                    {
+                        LogAuthorizationFailure(user, $"Source file or folder not found: {sourcePath}");
+                        throw CreateSystemFault($"Source file or folder not found: {sourcePath}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    LogFailure(user, $"Impersonation or move operation failed: {ex.Message}");
-                    throw CreateSecurityFault($"Impersonation or move operation failed: {ex.Message}");
+                    LogAuthorizationFailure(user, $"Move operation failed: {ex.Message}");
+                    throw CreateSecurityFault($"Move operation failed: {ex.Message}");
                 }
 
-                LogSuccess(user);
+                LogAuthorizationSuccess(user);
                 return true;
             }
             catch (Exception ex)
             {
-                LogFailure(user, $"Exception in MoveTo: {ex.Message}");
+                LogAuthorizationFailure(user, $"Exception in MoveTo: {ex.Message}");
                 throw CreateSystemFault($"Error while moving: {ex.Message}");
             }
         }
@@ -377,7 +401,7 @@ namespace Server.Services
 
             if (principal == null || !principal.IsInRole(Permission.See))
             {
-                LogFailure(user, "ReadFile requires See permission.");
+                LogAuthorizationFailure(user, "ReadFile requires See permission.");
                 throw CreateSecurityFault($"User {user} is not authorized for ReadFile.");
             }
 
@@ -385,7 +409,7 @@ namespace Server.Services
             {
                 if (!path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
                 {
-                    LogFailure(user, "Only .txt files are supported.");
+                    LogAuthorizationFailure(user, "Only .txt files are supported.");
                     throw CreateSystemFault("Only .txt files are supported.");
                 }
 
@@ -393,21 +417,19 @@ namespace Server.Services
 
                 if (!File.Exists(resolvedPath))
                 {
-                    LogFailure(user, $"File not found: {path}");
+                    LogAuthorizationFailure(user, $"File not found: {path}");
                     throw CreateSystemFault($"File not found: {path}");
                 }
                 byte[] fileContent = File.ReadAllBytes(resolvedPath);
                 FileData encryptedData = EncryptionHelper.EncryptContent(fileContent);
 
-                LogSuccess(user);
-                string serverAddress = GetServerAddress();
-                AuditFacade.FileAccessed(user, path, serverAddress);
-
+                LogAuthorizationSuccess(user);
+                LogFileAccessed(user, path);
                 return encryptedData;
             }
             catch (Exception ex)
             {
-                LogFailure(user, $"Exception in ReadFile: {ex.Message}");
+                LogAuthorizationFailure(user, $"Exception in ReadFile: {ex.Message}");
                 throw CreateSystemFault($"Error while reading file: {ex.Message}");
             }
         }
@@ -419,7 +441,7 @@ namespace Server.Services
 
             if (principal == null || !principal.IsInRole(Permission.See))
             {
-                LogFailure(user, "ShowFolderContent requires See permission.");
+                LogAuthorizationFailure(user, "ShowFolderContent requires See permission.");
                 throw CreateSecurityFault($"User {user} is not authorized for ShowFolderContent.");
             }
 
@@ -429,7 +451,7 @@ namespace Server.Services
 
                 if (!Directory.Exists(resolvedPath))
                 {
-                    LogFailure(user, $"Folder not found: {path}");
+                    LogAuthorizationFailure(user, $"Folder not found: {path}");
                     throw CreateSystemFault($"Folder not found: {path}");
                 }
 
@@ -445,45 +467,15 @@ namespace Server.Services
                     })
                     .ToArray();
 
-                LogSuccess(user);
-                string serverAddress = GetServerAddress();
-                AuditFacade.FolderAccessed(user, path, serverAddress);
+                LogAuthorizationSuccess(user);
+                LogFolderAccessed(user, path);
                 return entries;
             }
             catch (Exception ex)
             {
-                LogFailure(user, $"Exception in ShowFolderContent: {ex.Message}");
+                LogAuthorizationFailure(user, $"Exception in ShowFolderContent: {ex.Message}");
                 throw CreateSystemFault($"Error while showing folder content: {ex.Message}");
             }
-        }
-
-        private string ResolvePath(string relativePath)
-        {
-            string safePath = Path.GetFullPath(Path.Combine(dataDirectory, relativePath.TrimStart('\\', '/')));
-
-            if (!safePath.StartsWith(dataDirectory))
-            {
-                throw CreateSystemFault("Access to paths outside the data directory is not allowed.");
-            }
-
-            return safePath;
-        }
-
-        private WindowsIdentity GetCallingUserIdentity()
-        {
-            try
-            {
-                if (OperationContext.Current?.ServiceSecurityContext?.WindowsIdentity != null)
-                {
-                    return OperationContext.Current.ServiceSecurityContext.WindowsIdentity;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to get calling user identity: {ex.Message}");
-            }
-
-            return WindowsIdentity.GetCurrent();
         }
     }
 }
