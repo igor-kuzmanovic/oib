@@ -16,14 +16,14 @@ namespace Server.Services
 {
     public class FileWCFService : IFileWCFService
     {
-        private static readonly IFileStorageService fileStorageService = new FileStorageService();
+        private static readonly IStorageService storageService = new MemoryStorageService();
 
         public string[] ShowFolderContent(string path)
         {
             string serverAddress = Configuration.PrimaryServerAddress;
             try
             {
-                return fileStorageService.ShowFolderContent(path);
+                return storageService.ShowFolderContent(path);
             }
             catch (Exception ex)
             {
@@ -38,7 +38,7 @@ namespace Server.Services
             string serverAddress = Configuration.PrimaryServerAddress;
             try
             {
-                var decryptedContent = fileStorageService.ReadFile(path);
+                var decryptedContent = storageService.ReadFile(path);
                 return EncryptionHelper.EncryptContent(decryptedContent);
             }
             catch (Exception ex)
@@ -66,7 +66,7 @@ namespace Server.Services
                 bool result;
                 using ((principal.Identity as WindowsIdentity).Impersonate())
                 {
-                    result = fileStorageService.CreateFile(path, decryptedContent);
+                    result = storageService.CreateFile(path, decryptedContent);
                 }
                 AuditFacade.FileCreated(user, path, serverAddress);
                 return result;
@@ -95,7 +95,7 @@ namespace Server.Services
                 bool result;
                 using ((principal.Identity as WindowsIdentity).Impersonate())
                 {
-                    result = fileStorageService.CreateFolder(path);
+                    result = storageService.CreateFolder(path);
                 }
                 AuditFacade.FolderCreated(user, path, serverAddress);
                 return result;
@@ -124,7 +124,7 @@ namespace Server.Services
                 bool result;
                 using ((principal.Identity as WindowsIdentity).Impersonate())
                 {
-                    result = fileStorageService.Delete(path);
+                    result = storageService.Delete(path);
                 }
                 AuditFacade.FileDeleted(user, path, serverAddress);
                 return result;
@@ -168,7 +168,7 @@ namespace Server.Services
                 bool result;
                 using ((principal.Identity as WindowsIdentity).Impersonate())
                 {
-                    result = fileStorageService.MoveTo(sourcePath, destinationPath);
+                    result = storageService.MoveTo(sourcePath, destinationPath);
                 }
                 AuditFacade.FileMoved(user, sourcePath, destinationPath, serverAddress);
                 return result;

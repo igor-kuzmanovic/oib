@@ -2,7 +2,7 @@ using Contracts.Models;
 
 namespace Server.Services
 {
-    public interface IFileStorageService
+    public interface IStorageService
     {
         string[] ShowFolderContent(string path);
         byte[] ReadFile(string path);

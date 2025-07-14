@@ -15,7 +15,7 @@ using Server.Audit;
 
 namespace Server.Services
 {
-    public class FileStorageService : IFileStorageService
+    public class FileStorageService : IStorageService
     {
         private readonly string dataDirectory;
 
@@ -121,6 +121,8 @@ namespace Server.Services
 
         public string[] ShowFolderContent(string path)
         {
+            if (string.IsNullOrWhiteSpace(path) || path == "." || path == "/" || path == "\\")
+                path = "";
             string resolvedPath = ResolvePath(path);
             if (!Directory.Exists(resolvedPath))
                 throw new Exception("Folder does not exist at the specified path.");
@@ -129,9 +131,19 @@ namespace Server.Services
                 .Select(entry =>
                 {
                     if (entry.StartsWith(dataDirectory, StringComparison.OrdinalIgnoreCase))
-                        return entry.Substring(dataDirectory.Length).TrimStart(new char[] { '\\', '/' });
+                    {
+                        var relative = entry.Substring(dataDirectory.Length).TrimStart(new char[] { '\\', '/' });
+                        if (path == "" && (relative.Contains("/") || relative.Contains("\\")))
+                        {
+                            var firstSep = relative.IndexOfAny(new char[] { '/', '\\' });
+                            if (firstSep > 0)
+                                return relative.Substring(0, firstSep);
+                        }
+                        return relative;
+                    }
                     return entry;
                 })
+                .Distinct()
                 .ToArray();
             return entries;
         }
