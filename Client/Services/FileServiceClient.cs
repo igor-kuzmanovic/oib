@@ -19,10 +19,17 @@ namespace Client.Services
 
         public FileServiceClient()
         {
-            binding = new NetTcpBinding();
-
-            binding.Security.Mode = SecurityMode.Transport;
-            binding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Windows;
+            binding = new NetTcpBinding()
+            {
+                Security =
+                {
+                    Mode = SecurityMode.Transport,
+                    Transport =
+                    {
+                        ClientCredentialType = TcpClientCredentialType.Windows
+                    }
+                }
+            };
 
             primaryAddress = new EndpointAddress(new Uri(Configuration.PrimaryServerAddress));
             backupAddress = new EndpointAddress(new Uri(Configuration.BackupServerAddress));
@@ -33,7 +40,8 @@ namespace Client.Services
         private void CreateServiceProxy()
         {
             var factory = new ChannelFactory<IFileWCFService>(binding, usingPrimaryServer ? primaryAddress : backupAddress);
-            factory.Credentials.Windows.AllowedImpersonationLevel = TokenImpersonationLevel.Delegation; // Allows impersonation
+            factory.Credentials.Windows.AllowedImpersonationLevel = TokenImpersonationLevel.Impersonation; // Allows impersonation
+
             serviceProxy = factory.CreateChannel();
 
             Console.WriteLine($"Connected to {(usingPrimaryServer ? "primary" : "backup")} server at {GetCurrentServerAddress()}");

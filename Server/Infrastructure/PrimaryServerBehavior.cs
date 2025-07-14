@@ -44,6 +44,13 @@ namespace Server.Infrastructure
 
             fileHost = new ServiceHost(typeof(FileWCFService));
             fileHost.AddServiceEndpoint(typeof(IFileWCFService), fileBinding, fileAddress);
+
+            fileHost.Description.Behaviors.Remove<ServiceDebugBehavior>();
+            fileHost.Description.Behaviors.Add(new ServiceDebugBehavior
+            {
+                IncludeExceptionDetailInFaults = true,
+            });
+
             fileHost.Authorization.ServiceAuthorizationManager = new Server.Authorization.AuthorizationManager();
             fileHost.Authorization.PrincipalPermissionMode = PrincipalPermissionMode.Custom;
             fileHost.Authorization.ImpersonateCallerForAllOperations = false;
@@ -79,6 +86,12 @@ namespace Server.Infrastructure
 
             syncHost = new ServiceHost(typeof(SyncWCFService));
             syncHost.AddServiceEndpoint(typeof(ISyncWCFService), syncBinding, syncAddress);
+
+            syncHost.Description.Behaviors.Remove<ServiceDebugBehavior>();
+            syncHost.Description.Behaviors.Add(new ServiceDebugBehavior
+            {
+                IncludeExceptionDetailInFaults = true,
+            });
 
             //syncHost.Credentials.ServiceCertificate.Certificate = serverCertificate;
             //syncHost.Credentials.ClientCertificate.Authentication.CertificateValidationMode = X509CertificateValidationMode.Custom;

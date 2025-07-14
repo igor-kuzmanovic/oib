@@ -1,33 +1,41 @@
+using Contracts.Authorization;
+using Contracts.Encryption;
+using Contracts.Exceptions;
+using Contracts.Helpers;
 using Contracts.Interfaces;
 using Contracts.Models;
-using Contracts.Helpers;
+using Server.Audit;
+using Server.Authorization;
+using Server.Infrastructure;
 using System;
+using System.Security.Principal;
 using System.ServiceModel;
-using Contracts.Encryption;
+using System.Threading;
 
 namespace Server.Services
 {
-    // TODO Fix impersonation
     public class FileWCFService : IFileWCFService
     {
         private static readonly IFileStorageService fileStorageService = new FileStorageService();
 
         public string[] ShowFolderContent(string path)
         {
+            string serverAddress = Configuration.PrimaryServerAddress;
             try
             {
                 return fileStorageService.ShowFolderContent(path);
             }
             catch (Exception ex)
             {
-                string serverAddress = Server.Infrastructure.Configuration.PrimaryServerAddress;
-                Server.Audit.AuditFacade.ServerError(ex.Message, serverAddress);
-                throw new FaultException<Contracts.Exceptions.FileSystemException>(new Contracts.Exceptions.FileSystemException(ex.Message), new FaultReason(ex.Message));
+                Console.WriteLine($"[FileWCFService] 'ShowFolderContent' error: {ex}");
+                AuditFacade.ServerError(ex.Message, serverAddress);
+                throw new FaultException<FileSystemException>(new FileSystemException(ex.Message));
             }
         }
 
         public FileData ReadFile(string path)
         {
+            string serverAddress = Configuration.PrimaryServerAddress;
             try
             {
                 var decryptedContent = fileStorageService.ReadFile(path);
@@ -35,150 +43,141 @@ namespace Server.Services
             }
             catch (Exception ex)
             {
-                string serverAddress = Server.Infrastructure.Configuration.PrimaryServerAddress;
-                Server.Audit.AuditFacade.ServerError(ex.Message, serverAddress);
-                throw new FaultException<Contracts.Exceptions.FileSystemException>(new Contracts.Exceptions.FileSystemException(ex.Message), new FaultReason(ex.Message));
+                Console.WriteLine($"[FileWCFService] 'ReadFile' error: {ex}");
+                AuditFacade.ServerError(ex.Message, serverAddress);
+                throw new FaultException<FileSystemException>(new FileSystemException(ex.Message));
             }
         }
 
         public bool CreateFile(string path, FileData fileData)
         {
-            var principal = System.Threading.Thread.CurrentPrincipal as Server.Authorization.Principal;
-            string user = Contracts.Helpers.SecurityHelper.GetName(System.Security.Principal.WindowsIdentity.GetCurrent());
-            string serverAddress = Server.Infrastructure.Configuration.PrimaryServerAddress;
-            if (principal == null || !principal.IsInRole(Contracts.Authorization.Permission.Change))
+            var principal = Thread.CurrentPrincipal as Principal;
+            string user = SecurityHelper.GetName(OperationContext.Current);
+            string serverAddress = Configuration.PrimaryServerAddress;
+            if (principal == null || !principal.IsInRole(Permission.Change))
             {
-                Server.Audit.AuditFacade.AuthorizationFailed(user, "CreateFile", serverAddress, "Change permission required");
-                throw new FaultException<Contracts.Exceptions.FileSecurityException>(new Contracts.Exceptions.FileSecurityException($"User {user} is not authorized for CreateFile."));
+                AuditFacade.AuthorizationFailed(user, "CreateFile", serverAddress, "Change permission required");
+                throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for CreateFile."));
             }
-            Server.Audit.AuditFacade.AuthorizationSuccess(user, "CreateFile", serverAddress);
-            if (!path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
-            {
-                Server.Audit.AuditFacade.ServerError("Only .txt files are supported.", serverAddress);
-                throw new FaultException<Contracts.Exceptions.FileSystemException>(new Contracts.Exceptions.FileSystemException("Only .txt files are supported."), new FaultReason("Only .txt files are supported."));
-            }
-            if (fileData == null || fileData.Content == null || fileData.InitializationVector == null)
-            {
-                Server.Audit.AuditFacade.ServerError("FileData or its properties cannot be null.", serverAddress);
-                throw new FaultException<Contracts.Exceptions.FileSystemException>(new Contracts.Exceptions.FileSystemException("FileData or its properties cannot be null."), new FaultReason("FileData or its properties cannot be null."));
-            }
+            AuditFacade.AuthorizationSuccess(user, "CreateFile", serverAddress);
             try
             {
+                var decryptedContent = EncryptionHelper.DecryptContent(fileData);
                 bool result;
-                var windowsIdentity = System.ServiceModel.OperationContext.Current.ServiceSecurityContext.WindowsIdentity;
-                //using (windowsIdentity.Impersonate())
+                using ((principal.Identity as WindowsIdentity).Impersonate())
                 {
-                    var decryptedContent = Contracts.Encryption.EncryptionHelper.DecryptContent(fileData);
                     result = fileStorageService.CreateFile(path, decryptedContent);
                 }
-                Server.Audit.AuditFacade.FileCreated(user, path, serverAddress);
+                AuditFacade.FileCreated(user, path, serverAddress);
                 return result;
             }
             catch (Exception ex)
             {
-                Server.Audit.AuditFacade.ServerError(ex.Message, serverAddress);
-                throw new FaultException<Contracts.Exceptions.FileSystemException>(new Contracts.Exceptions.FileSystemException(ex.Message), new FaultReason(ex.Message));
+                Console.WriteLine($"[FileWCFService] 'CreateFile' error: {ex}");
+                AuditFacade.ServerError(ex.Message, serverAddress);
+                throw new FaultException<FileSystemException>(new FileSystemException(ex.Message));
             }
         }
 
         public bool CreateFolder(string path)
         {
-            var principal = System.Threading.Thread.CurrentPrincipal as Server.Authorization.Principal;
-            string user = Contracts.Helpers.SecurityHelper.GetName(System.Security.Principal.WindowsIdentity.GetCurrent());
-            string serverAddress = Server.Infrastructure.Configuration.PrimaryServerAddress;
-            if (principal == null || !principal.IsInRole(Contracts.Authorization.Permission.Change))
+            var principal = Thread.CurrentPrincipal as Principal;
+            string user = SecurityHelper.GetName(OperationContext.Current);
+            string serverAddress = Configuration.PrimaryServerAddress;
+            if (principal == null || !principal.IsInRole(Permission.Change))
             {
-                Server.Audit.AuditFacade.AuthorizationFailed(user, "CreateFolder", serverAddress, "Change permission required");
-                throw new FaultException<Contracts.Exceptions.FileSecurityException>(new Contracts.Exceptions.FileSecurityException($"User {user} is not authorized for CreateFolder."));
+                AuditFacade.AuthorizationFailed(user, "CreateFolder", serverAddress, "Change permission required");
+                throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for CreateFolder."));
             }
-            Server.Audit.AuditFacade.AuthorizationSuccess(user, "CreateFolder", serverAddress);
+            AuditFacade.AuthorizationSuccess(user, "CreateFolder", serverAddress);
             try
             {
                 bool result;
-                var windowsIdentity = System.ServiceModel.OperationContext.Current.ServiceSecurityContext.WindowsIdentity;
-                //using (windowsIdentity.Impersonate())
+                using ((principal.Identity as WindowsIdentity).Impersonate())
                 {
                     result = fileStorageService.CreateFolder(path);
                 }
-                Server.Audit.AuditFacade.FolderCreated(user, path, serverAddress);
+                AuditFacade.FolderCreated(user, path, serverAddress);
                 return result;
             }
             catch (Exception ex)
             {
-                Server.Audit.AuditFacade.ServerError(ex.Message, serverAddress);
-                throw new FaultException<Contracts.Exceptions.FileSystemException>(new Contracts.Exceptions.FileSystemException(ex.Message), new FaultReason(ex.Message));
+                Console.WriteLine($"[FileWCFService] 'CreateFolder' error: {ex}");
+                AuditFacade.ServerError(ex.Message, serverAddress);
+                throw new FaultException<FileSystemException>(new FileSystemException(ex.Message));
             }
         }
 
         public bool Delete(string path)
         {
-            var principal = System.Threading.Thread.CurrentPrincipal as Server.Authorization.Principal;
-            string user = Contracts.Helpers.SecurityHelper.GetName(System.Security.Principal.WindowsIdentity.GetCurrent());
-            string serverAddress = Server.Infrastructure.Configuration.PrimaryServerAddress;
-            if (principal == null || !principal.IsInRole(Contracts.Authorization.Permission.Delete))
+            var principal = Thread.CurrentPrincipal as Principal;
+            string user = SecurityHelper.GetName(OperationContext.Current);
+            string serverAddress = Configuration.PrimaryServerAddress;
+            if (principal == null || !principal.IsInRole(Permission.Delete))
             {
-                Server.Audit.AuditFacade.AuthorizationFailed(user, "Delete", serverAddress, "Delete permission required");
-                throw new FaultException<Contracts.Exceptions.FileSecurityException>(new Contracts.Exceptions.FileSecurityException($"User {user} is not authorized for Delete."));
+                AuditFacade.AuthorizationFailed(user, "Delete", serverAddress, "Delete permission required");
+                throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for Delete."));
             }
-            Server.Audit.AuditFacade.AuthorizationSuccess(user, "Delete", serverAddress);
+            AuditFacade.AuthorizationSuccess(user, "Delete", serverAddress);
             try
             {
                 bool result;
-                var windowsIdentity = System.ServiceModel.OperationContext.Current.ServiceSecurityContext.WindowsIdentity;
-                //using (windowsIdentity.Impersonate())
+                using ((principal.Identity as WindowsIdentity).Impersonate())
                 {
                     result = fileStorageService.Delete(path);
                 }
-                Server.Audit.AuditFacade.FileDeleted(user, path, serverAddress);
+                AuditFacade.FileDeleted(user, path, serverAddress);
                 return result;
             }
             catch (Exception ex)
             {
-                Server.Audit.AuditFacade.ServerError(ex.Message, serverAddress);
-                throw new FaultException<Contracts.Exceptions.FileSystemException>(new Contracts.Exceptions.FileSystemException(ex.Message), new FaultReason(ex.Message));
+                Console.WriteLine($"[FileWCFService] 'Delete' error: {ex}");
+                AuditFacade.ServerError(ex.Message, serverAddress);
+                throw new FaultException<FileSystemException>(new FileSystemException(ex.Message));
             }
         }
 
         public bool Rename(string sourcePath, string destinationPath)
         {
+            string serverAddress = Configuration.PrimaryServerAddress;
             try
             {
                 return MoveTo(sourcePath, destinationPath);
             }
             catch (Exception ex)
             {
-                string serverAddress = Server.Infrastructure.Configuration.PrimaryServerAddress;
-                Server.Audit.AuditFacade.ServerError(ex.Message, serverAddress);
-                throw new FaultException<Contracts.Exceptions.FileSystemException>(new Contracts.Exceptions.FileSystemException(ex.Message), new FaultReason(ex.Message));
+                Console.WriteLine($"[FileWCFService] 'Rename' error: {ex}");
+                AuditFacade.ServerError(ex.Message, serverAddress);
+                throw new FaultException<FileSystemException>(new FileSystemException(ex.Message));
             }
         }
 
         public bool MoveTo(string sourcePath, string destinationPath)
         {
-            var principal = System.Threading.Thread.CurrentPrincipal as Server.Authorization.Principal;
-            string user = Contracts.Helpers.SecurityHelper.GetName(System.Security.Principal.WindowsIdentity.GetCurrent());
-            string serverAddress = Server.Infrastructure.Configuration.PrimaryServerAddress;
-            if (principal == null || !principal.IsInRole(Contracts.Authorization.Permission.Change))
+            var principal = Thread.CurrentPrincipal as Principal;
+            string user = SecurityHelper.GetName(OperationContext.Current);
+            string serverAddress = Configuration.PrimaryServerAddress;
+            if (principal == null || !principal.IsInRole(Permission.Change))
             {
-                Server.Audit.AuditFacade.AuthorizationFailed(user, "MoveTo", serverAddress, "Change permission required");
-                throw new FaultException<Contracts.Exceptions.FileSecurityException>(new Contracts.Exceptions.FileSecurityException($"User {user} is not authorized for MoveTo."));
+                AuditFacade.AuthorizationFailed(user, "MoveTo", serverAddress, "Change permission required");
+                throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for MoveTo."));
             }
-            Server.Audit.AuditFacade.AuthorizationSuccess(user, "MoveTo", serverAddress);
+            AuditFacade.AuthorizationSuccess(user, "MoveTo", serverAddress);
             try
             {
                 bool result;
-                var windowsIdentity = System.ServiceModel.OperationContext.Current.ServiceSecurityContext.WindowsIdentity;
-                //using (windowsIdentity.Impersonate())
+                using ((principal.Identity as WindowsIdentity).Impersonate())
                 {
                     result = fileStorageService.MoveTo(sourcePath, destinationPath);
                 }
-                Server.Audit.AuditFacade.FileMoved(user, sourcePath, destinationPath, serverAddress);
+                AuditFacade.FileMoved(user, sourcePath, destinationPath, serverAddress);
                 return result;
             }
             catch (Exception ex)
             {
-                Server.Audit.AuditFacade.ServerError(ex.Message, serverAddress);
-                throw new FaultException<Contracts.Exceptions.FileSystemException>(new Contracts.Exceptions.FileSystemException(ex.Message), new FaultReason(ex.Message));
+                Console.WriteLine($"[FileWCFService] 'MoveTo' error: {ex}");
+                AuditFacade.ServerError(ex.Message, serverAddress);
+                throw new FaultException<FileSystemException>(new FileSystemException(ex.Message));
             }
         }
 

@@ -15,6 +15,8 @@ namespace Server.Authorization
         public Principal(WindowsIdentity windowsIdentity)
         {
             this.identity = windowsIdentity ?? throw new ArgumentNullException(nameof(windowsIdentity));
+            Console.WriteLine($"[Principal] Created for identity: {identity.Name}");
+            Console.WriteLine($"[Principal] Impersonation level: {identity.ImpersonationLevel}");
             this.permissions = new List<Permission>();
 
             LoadRoles();

@@ -23,7 +23,7 @@ namespace Server.Authorization
                 return false;
             }
 
-            Console.WriteLine($"[AuthorizationManager] 'CheckAccessCore' success");
+            Console.WriteLine($"[AuthorizationManager] 'CheckAccessCore' success for principal {principal.Identity.Name}");
             return true;
         }
     }
