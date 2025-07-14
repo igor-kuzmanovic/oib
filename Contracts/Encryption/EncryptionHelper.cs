@@ -19,7 +19,7 @@ namespace Contracts.Encryption
             }
         }
 
-        public static FileData EncryptContent(byte[] content)
+        public static FileData EncryptContent(FileData fileData)
         {
             using (Aes aes = Aes.Create())
             {
@@ -33,7 +33,7 @@ namespace Contracts.Encryption
                 {
                     using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, aes.CreateEncryptor(aes.Key, aes.IV), CryptoStreamMode.Write))
                     {
-                        csEncrypt.Write(content, 0, content.Length);
+                        csEncrypt.Write(fileData.Content, 0, fileData.Content.Length);
                         csEncrypt.FlushFinalBlock();
                         encryptedContent = msEncrypt.ToArray();
                     }
@@ -42,12 +42,15 @@ namespace Contracts.Encryption
                 return new FileData
                 {
                     InitializationVector = aes.IV,
-                    Content = encryptedContent
+                    Content = encryptedContent,
+                    CreatedBy = fileData.CreatedBy,
+                    CreatedAt = fileData.CreatedAt,
+                    IsFile = fileData.IsFile
                 };
             }
         }
 
-        public static byte[] DecryptContent(FileData fileData)
+        public static FileData DecryptContent(FileData fileData)
         {
             using (Aes aes = Aes.Create())
             {
@@ -61,7 +64,13 @@ namespace Contracts.Encryption
                     {
                         csDecrypt.Write(fileData.Content, 0, fileData.Content.Length);
                         csDecrypt.FlushFinalBlock();
-                        return msDecrypt.ToArray();
+                        return new FileData
+                        {
+                            Content = msDecrypt.ToArray(),
+                            CreatedBy = fileData.CreatedBy,
+                            CreatedAt = fileData.CreatedAt,
+                            IsFile = fileData.IsFile
+                        };
                     }
                 }
             }

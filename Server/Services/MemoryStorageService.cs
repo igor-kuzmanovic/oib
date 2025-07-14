@@ -3,31 +3,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.ServiceModel;
 using System.Security.Principal;
+using Contracts.Models;
 
 namespace Server.Services
 {
     public class MemoryStorageService : IStorageService
     {
-        private class Entry
-        {
-            public string Path { get; set; }
-            public bool IsFile { get; set; }
-            public byte[] Content { get; set; }
-            public string CreatedBy { get; set; }
-            public DateTime CreatedAt { get; set; }
-        }
-
-        private readonly Dictionary<string, Entry> entries = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, FileData> entries = new Dictionary<string, FileData>(StringComparer.OrdinalIgnoreCase);
 
         public MemoryStorageService()
         {
-            entries[""] = new Entry
+            entries[""] = new FileData
             {
-                Path = "",
-                IsFile = false,
                 Content = null,
                 CreatedBy = "system",
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                IsFile = false
             };
         }
 
@@ -49,13 +40,13 @@ namespace Server.Services
             if (!entries.ContainsKey(directory) || entries[directory].IsFile)
                 throw new Exception("Parent folder does not exist.");
             string createdBy = GetCurrentUser();
-            entries[path] = new Entry
+            entries[path] = new FileData
             {
                 Path = path,
-                IsFile = true,
                 Content = content,
                 CreatedBy = createdBy,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                IsFile = true
             };
             return true;
         }
@@ -69,13 +60,13 @@ namespace Server.Services
             if (!entries.ContainsKey(parent) || entries[parent].IsFile)
                 throw new Exception("Parent folder does not exist.");
             string createdBy = GetCurrentUser();
-            entries[path] = new Entry
+            entries[path] = new FileData
             {
                 Path = path,
-                IsFile = false,
                 Content = null,
                 CreatedBy = createdBy,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                IsFile = false
             };
             return true;
         }
@@ -125,13 +116,13 @@ namespace Server.Services
             var entry = entries[sourcePath];
             if (entry.IsFile)
             {
-                entries[destinationPath] = new Entry
+                entries[destinationPath] = new FileData
                 {
                     Path = destinationPath,
-                    IsFile = true,
                     Content = entry.Content,
                     CreatedBy = entry.CreatedBy,
-                    CreatedAt = entry.CreatedAt
+                    CreatedAt = entry.CreatedAt,
+                    IsFile = true
                 };
                 entries.Remove(sourcePath);
                 return true;
@@ -141,13 +132,13 @@ namespace Server.Services
             {
                 var e = entries[k];
                 string newPath = destinationPath + k.Substring(sourcePath.Length);
-                entries[newPath] = new Entry
+                entries[newPath] = new FileData
                 {
                     Path = newPath,
-                    IsFile = e.IsFile,
                     Content = e.Content,
                     CreatedBy = e.CreatedBy,
-                    CreatedAt = e.CreatedAt
+                    CreatedAt = e.CreatedAt,
+                    IsFile = e.IsFile
                 };
                 entries.Remove(k);
             }
@@ -159,43 +150,45 @@ namespace Server.Services
             return MoveTo(sourcePath, destinationPath);
         }
 
-        public byte[] ReadFile(string path)
+        public FileData ReadFile(string path)
         {
             path = NormalizePath(path);
             if (!path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
                 throw new Exception("Only .txt files are supported.");
             if (!entries.ContainsKey(path) || !entries[path].IsFile)
                 throw new Exception("File does not exist at the specified path.");
-            return entries[path].Content;
+            var entry = entries[path];
+            entry.IsFile = true;
+            entry.Path = path;
+            return entry;
         }
 
-        public string[] ShowFolderContent(string path)
+        public FileData[] ShowFolderContent(string path)
         {
             if (string.IsNullOrWhiteSpace(path) || path == "." || path == "/" || path == "\\")
                 path = "";
             path = NormalizePath(path);
             if (!entries.ContainsKey(path) || entries[path].IsFile)
                 throw new Exception("Folder does not exist at the specified path.");
-            List<string> result;
+            List<KeyValuePair<string, FileData>> result;
             if (path == "")
             {
-                result = entries.Values
-                    .Where(e => !string.IsNullOrEmpty(e.Path) && !e.Path.Contains("/") && !e.Path.Contains("\\"))
-                    .Select(e => e.Path)
+                result = entries.Where(kvp => !string.IsNullOrEmpty(kvp.Key) && !kvp.Key.Contains("/") && !kvp.Key.Contains("\\"))
                     .ToList();
             }
             else
             {
-                result = entries.Values
-                    .Where(e => {
-                        if (string.IsNullOrEmpty(e.Path) || e.Path == path) return false;
-                        var parent = System.IO.Path.GetDirectoryName(e.Path);
-                        return string.Equals(parent, path, StringComparison.OrdinalIgnoreCase);
-                    })
-                    .Select(e => e.Path)
-                    .ToList();
+                result = entries.Where(kvp => {
+                    if (string.IsNullOrEmpty(kvp.Key) || kvp.Key == path) return false;
+                    var parent = System.IO.Path.GetDirectoryName(kvp.Key);
+                    return string.Equals(parent, path, StringComparison.OrdinalIgnoreCase);
+                }).ToList();
             }
-            return result.ToArray();
+            return result.Select(kvp => {
+                kvp.Value.IsFile = kvp.Value.IsFile;
+                kvp.Value.Path = kvp.Key;
+                return kvp.Value;
+            }).ToArray();
         }
     }
 }

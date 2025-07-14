@@ -13,14 +13,18 @@ namespace Client.Commands
         public override void Execute()
         {
             string folderPath = GetUserInput("Enter folder path: ");
-            string[] items = FileServiceClient.ShowFolderContent(folderPath);
+            var items = FileServiceClient.ShowFolderContent(folderPath);
 
             if (items != null && items.Length > 0)
             {
                 Console.WriteLine($"\nContent of '{folderPath}':");
                 foreach (var item in items)
                 {
-                    Console.WriteLine($"  {item}");
+                    string type = item.IsFile ? "File" : "Folder";
+                    string name = item.Path != null ? System.IO.Path.GetFileName(item.Path) : "(unknown name)";
+                    string createdBy = item.CreatedBy ?? "unknown";
+                    string createdAt = item.CreatedAt != default ? item.CreatedAt.ToString("u") : "unknown";
+                    Console.WriteLine($"  [{type}] {name} | Created by: {createdBy}, Created at: {createdAt}");
                 }
             }
             else

@@ -109,17 +109,35 @@ namespace Server.Services
             return MoveTo(sourcePath, destinationPath);
         }
 
-        public byte[] ReadFile(string path)
+        public FileData ReadFile(string path)
         {
             if (!path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
                 throw new Exception("Only .txt files are supported.");
             string resolvedPath = ResolvePath(path);
             if (!File.Exists(resolvedPath))
                 throw new Exception("File does not exist at the specified path.");
-            return File.ReadAllBytes(resolvedPath);
+            var fileInfo = new FileInfo(resolvedPath);
+            string createdBy = "unknown";
+            DateTime createdAt = fileInfo.CreationTimeUtc;
+            try
+            {
+                var fileSecurity = fileInfo.GetAccessControl();
+                var owner = fileSecurity.GetOwner(typeof(System.Security.Principal.NTAccount));
+                if (owner != null)
+                    createdBy = owner.ToString();
+            }
+            catch { }
+            return new FileData
+            {
+                Path = path,
+                Content = File.ReadAllBytes(resolvedPath),
+                CreatedBy = createdBy,
+                CreatedAt = createdAt,
+                IsFile = true
+            };
         }
 
-        public string[] ShowFolderContent(string path)
+        public FileData[] ShowFolderContent(string path)
         {
             if (string.IsNullOrWhiteSpace(path) || path == "." || path == "/" || path == "\\")
                 path = "";
@@ -130,18 +148,37 @@ namespace Server.Services
                 .Where(entry => Directory.Exists(entry) || (File.Exists(entry) && entry.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)))
                 .Select(entry =>
                 {
-                    if (entry.StartsWith(dataDirectory, StringComparison.OrdinalIgnoreCase))
+                    bool isFile = File.Exists(entry);
+                    string createdBy = "unknown";
+                    DateTime createdAt = isFile ? File.GetCreationTimeUtc(entry) : Directory.GetCreationTimeUtc(entry);
+                    try
                     {
-                        var relative = entry.Substring(dataDirectory.Length).TrimStart(new char[] { '\\', '/' });
-                        if (path == "" && (relative.Contains("/") || relative.Contains("\\")))
+                        if (isFile)
                         {
-                            var firstSep = relative.IndexOfAny(new char[] { '/', '\\' });
-                            if (firstSep > 0)
-                                return relative.Substring(0, firstSep);
+                            var fileInfo = new FileInfo(entry);
+                            var fileSecurity = fileInfo.GetAccessControl();
+                            var owner = fileSecurity.GetOwner(typeof(System.Security.Principal.NTAccount));
+                            if (owner != null)
+                                createdBy = owner.ToString();
                         }
-                        return relative;
+                        else
+                        {
+                            var dirInfo = new DirectoryInfo(entry);
+                            var dirSecurity = dirInfo.GetAccessControl();
+                            var owner = dirSecurity.GetOwner(typeof(System.Security.Principal.NTAccount));
+                            if (owner != null)
+                                createdBy = owner.ToString();
+                        }
                     }
-                    return entry;
+                    catch { }
+                    return new FileData
+                    {
+                        Path = entry,
+                        Content = isFile ? File.ReadAllBytes(entry) : null,
+                        CreatedBy = createdBy,
+                        CreatedAt = createdAt,
+                        IsFile = isFile
+                    };
                 })
                 .Distinct()
                 .ToArray();

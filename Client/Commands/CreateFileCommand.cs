@@ -26,8 +26,14 @@ namespace Client.Commands
             string content = GetUserInput("Enter text content: ");
             byte[] contentBytes = Encoding.UTF8.GetBytes(content);
 
-
-            FileData newFileData = EncryptionHelper.EncryptContent(contentBytes);
+            FileData tempFileData = new FileData
+            {
+                Content = contentBytes,
+                CreatedBy = Environment.UserName,
+                CreatedAt = DateTime.UtcNow,
+                IsFile = true
+            };
+            FileData newFileData = EncryptionHelper.EncryptContent(tempFileData);
 
             bool fileCreated = FileServiceClient.CreateFile(newFilePath, newFileData);
             DisplayResult("File creation", fileCreated);

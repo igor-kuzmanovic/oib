@@ -23,14 +23,16 @@ namespace Client.Commands
                 Console.WriteLine($"Added .txt extension. Reading file: {filePath}");
             }
 
-            FileData fileData = FileServiceClient.ReadFile(filePath);
-            if (fileData != null && fileData.Content != null && fileData.InitializationVector != null)
+            FileData encryptedFileData = FileServiceClient.ReadFile(filePath);
+            if (encryptedFileData != null && encryptedFileData.Content != null && encryptedFileData.InitializationVector != null)
             {
-
-                byte[] decryptedContent = EncryptionHelper.DecryptContent(fileData);
+                FileData decryptedFileData = EncryptionHelper.DecryptContent(encryptedFileData);
                 Console.WriteLine($"\nFile '{filePath}' content:");
-                string textContent = Encoding.UTF8.GetString(decryptedContent);
+                string textContent = Encoding.UTF8.GetString(decryptedFileData.Content);
                 Console.WriteLine(textContent);
+                string createdBy = decryptedFileData.CreatedBy ?? "unknown";
+                string createdAt = decryptedFileData.CreatedAt != default ? decryptedFileData.CreatedAt.ToString("u") : "unknown";
+                Console.WriteLine($"Created by: {createdBy}, Created at: {createdAt}");
             }
             else
             {

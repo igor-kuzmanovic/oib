@@ -4,7 +4,7 @@ namespace Client.Services
 {
     public interface IFileServiceClient
     {
-        string[] ShowFolderContent(string path);
+        FileData[] ShowFolderContent(string path);
         FileData ReadFile(string path);
         bool CreateFile(string path, FileData fileData);
         bool CreateFolder(string path);

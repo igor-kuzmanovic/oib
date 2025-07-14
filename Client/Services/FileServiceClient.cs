@@ -113,7 +113,7 @@ namespace Client.Services
             return serviceProxy != null && ((ICommunicationObject)serviceProxy).State == CommunicationState.Faulted;
         }
 
-        public string[] ShowFolderContent(string path)
+        public FileData[] ShowFolderContent(string path)
         {
             return ExecuteWithFailover(() => serviceProxy.ShowFolderContent(path), "ShowFolderContent");
         }

@@ -18,7 +18,7 @@ namespace Server.Services
     {
         private static readonly IStorageService storageService = new MemoryStorageService();
 
-        public string[] ShowFolderContent(string path)
+        public FileData[] ShowFolderContent(string path)
         {
             string serverAddress = Configuration.PrimaryServerAddress;
             try
@@ -38,8 +38,8 @@ namespace Server.Services
             string serverAddress = Configuration.PrimaryServerAddress;
             try
             {
-                var decryptedContent = storageService.ReadFile(path);
-                return EncryptionHelper.EncryptContent(decryptedContent);
+                var fileData = storageService.ReadFile(path);
+                return EncryptionHelper.EncryptContent(fileData);
             }
             catch (Exception ex)
             {
@@ -62,11 +62,11 @@ namespace Server.Services
             AuditFacade.AuthorizationSuccess(user, "CreateFile", serverAddress);
             try
             {
-                var decryptedContent = EncryptionHelper.DecryptContent(fileData);
+                var decryptedFileData = EncryptionHelper.DecryptContent(fileData);
                 bool result;
                 using ((principal.Identity as WindowsIdentity).Impersonate())
                 {
-                    result = storageService.CreateFile(path, decryptedContent);
+                    result = storageService.CreateFile(path, decryptedFileData.Content);
                 }
                 AuditFacade.FileCreated(user, path, serverAddress);
                 return result;

@@ -11,7 +11,7 @@ namespace Contracts.Interfaces
         [OperationContract]
         [FaultContract(typeof(FileSecurityException))]
         [FaultContract(typeof(FileSystemException))]
-        string[] ShowFolderContent(string path);
+        FileData[] ShowFolderContent(string path);
 
         [OperationContract]
         [FaultContract(typeof(FileSecurityException))]

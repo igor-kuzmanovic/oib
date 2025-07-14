@@ -21,42 +21,42 @@
 
         public static void FileCreated(string userName, string filePath, string serverAddress)
         {
-            Audit.FileCreated(filePath, userName, serverAddress);
+            Audit.FileCreated(userName, filePath, serverAddress);
         }
 
         public static void FolderCreated(string userName, string folderPath, string serverAddress)
         {
-            Audit.FolderCreated(folderPath, userName, serverAddress);
+            Audit.FolderCreated(userName, folderPath, serverAddress);
         }
 
         public static void FileDeleted(string userName, string filePath, string serverAddress)
         {
-            Audit.FileDeleted(filePath, userName, serverAddress);
+            Audit.FileDeleted(userName, filePath, serverAddress);
         }
 
         public static void FolderDeleted(string userName, string folderPath, string serverAddress)
         {
-            Audit.FolderDeleted(folderPath, userName, serverAddress);
+            Audit.FolderDeleted(userName, folderPath, serverAddress);
         }
 
         public static void FileMoved(string userName, string sourcePath, string destinationPath, string serverAddress)
         {
-            Audit.FileMoved(sourcePath, destinationPath, userName, serverAddress);
+            Audit.FileMoved(userName, sourcePath, destinationPath, serverAddress);
         }
 
         public static void FolderMoved(string userName, string sourcePath, string destinationPath, string serverAddress)
         {
-            Audit.FolderMoved(sourcePath, destinationPath, userName, serverAddress);
+            Audit.FolderMoved(userName, sourcePath, destinationPath, serverAddress);
         }
 
         public static void FileAccessed(string userName, string filePath, string serverAddress)
         {
-            Audit.FileAccessed(filePath, userName, serverAddress);
+            Audit.FileAccessed(userName, filePath, serverAddress);
         }
 
         public static void FolderAccessed(string userName, string folderPath, string serverAddress)
         {
-            Audit.FolderAccessed(folderPath, userName, serverAddress);
+            Audit.FolderAccessed(userName, folderPath, serverAddress);
         }
 
         public static void ServerStarted(string serverAddress)

@@ -4,8 +4,8 @@ namespace Server.Services
 {
     public interface IStorageService
     {
-        string[] ShowFolderContent(string path);
-        byte[] ReadFile(string path);
+        FileData[] ShowFolderContent(string path);
+        FileData ReadFile(string path);
         bool CreateFile(string path, byte[] content);
         bool CreateFolder(string path);
         bool Delete(string path);
