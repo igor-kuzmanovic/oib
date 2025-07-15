@@ -14,11 +14,11 @@ namespace Server.Infrastructure
         public static string PrimaryServerAddress => ConfigurationManager.AppSettings["PrimaryServerAddress"] ?? "net.tcp://localhost:9999/FileWCFService";
         public static string BackupServerAddress => ConfigurationManager.AppSettings["BackupServerAddress"] ?? "net.tcp://localhost:8888/FileWCFService";
 
-        public static string PrimaryServerSyncAddress => ConfigurationManager.AppSettings["PrimaryServerSyncAddress"] ?? "net.tcp://localhost:19999/SyncWCFService";
-        public static string BackupServerSyncAddress => ConfigurationManager.AppSettings["BackupServerSyncAddress"] ?? "net.tcp://localhost:18888/SyncWCFService";
+        public static string ServerSyncAddress => ConfigurationManager.AppSettings["ServerSyncAddress"] ?? "net.tcp://localhost:7777/SyncWCFService";
 
-        public static string PrimaryServerCN => ConfigurationManager.AppSettings["PrimaryServerCN"] ?? "FileServerPrimary";
-        public static string BackupServerCN => ConfigurationManager.AppSettings["BackupServerCN"] ?? "FileServerBackup";
+        public static string ServerSyncCertificateCN => ConfigurationManager.AppSettings["ServerSyncCertificateCN"] ?? "FileServerAlpha";
+        public static string ClientSyncCertificateCN => ConfigurationManager.AppSettings["ClientSyncCertificateCN"] ?? "FileServerBeta";
+        public static string RemoteServerSyncCertificateCN => ConfigurationManager.AppSettings["RemoteServerSyncCertificateCN"] ?? "FileServerAlpha";
 
         public static string DataDirectory => ConfigurationManager.AppSettings["DataDirectory"] ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..\\..\\..\\Files");
 

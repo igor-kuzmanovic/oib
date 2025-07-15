@@ -24,7 +24,8 @@ namespace Server.Infrastructure
             string remoteSyncAddress,
             X509Certificate2 clientCertificate,
             X509Certificate2 remoteServerCertificate,
-            Action promoteCallback)
+            Action promoteCallback
+        )
         {
             this.fileAddress = fileAddress;
             this.syncAddress = syncAddress;
@@ -56,7 +57,7 @@ namespace Server.Infrastructure
 
         public void Stop()
         {
-            
+
         }
     }
 }

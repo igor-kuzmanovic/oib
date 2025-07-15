@@ -1,4 +1,5 @@
 ﻿using Contracts.Interfaces;
+using Server.Authorization;
 using Server.Services;
 using System;
 using System.Collections.Generic;
@@ -71,17 +72,16 @@ namespace Server.Infrastructure
             }
         }
 
-        // TODO Fix certificates
         private void StartSyncHost()
         {
             var syncBinding = new NetTcpBinding
             {
-                //Security = {
-                //    Mode = SecurityMode.Transport,
-                //    Transport = {
-                //        ClientCredentialType = TcpClientCredentialType.Certificate,
-                //    }
-                //}
+                Security = {
+                    Mode = SecurityMode.Transport,
+                    Transport = {
+                        ClientCredentialType = TcpClientCredentialType.Certificate,
+                    }
+                }
             };
 
             syncHost = new ServiceHost(typeof(SyncWCFService));
@@ -93,9 +93,9 @@ namespace Server.Infrastructure
                 IncludeExceptionDetailInFaults = true,
             });
 
-            //syncHost.Credentials.ServiceCertificate.Certificate = serverCertificate;
-            //syncHost.Credentials.ClientCertificate.Authentication.CertificateValidationMode = X509CertificateValidationMode.Custom;
-            //syncHost.Credentials.ClientCertificate.Authentication.CustomCertificateValidator = new Server.Authorization.CertificateValidator();
+            syncHost.Credentials.ServiceCertificate.Certificate = serverCertificate;
+            syncHost.Credentials.ClientCertificate.Authentication.CertificateValidationMode = X509CertificateValidationMode.Custom;
+            syncHost.Credentials.ClientCertificate.Authentication.CustomCertificateValidator = new CertificateValidator();
 
             try
             {

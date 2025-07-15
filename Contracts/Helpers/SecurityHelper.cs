@@ -43,7 +43,13 @@ namespace Contracts.Helpers
             }
         }
 
-        public static X509Certificate2 GetCurrentUserCertificate()
+        public static X509Certificate2 GetCertificate(string subjectName)
+        {
+            Console.WriteLine($"[SecurityHelper] GetCertificate called with subjectName='{subjectName}'");
+            return GetCertificate(StoreName.My, StoreLocation.LocalMachine, subjectName);
+        }
+
+        public static X509Certificate2 GetCertificate()
         {
             string subjectName = ParseName(WindowsIdentity.GetCurrent().Name);
             Console.WriteLine($"[SecurityHelper] GetCurrentUserCertificate: current Windows identity parsed as subjectName='{subjectName}'");

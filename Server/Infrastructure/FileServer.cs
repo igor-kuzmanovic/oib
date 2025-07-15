@@ -20,23 +20,25 @@ namespace Server.Infrastructure
         private readonly string syncAddress;
         private readonly string remoteSyncAddress;
         private readonly X509Certificate2 serverCertificate;
-        private readonly X509Certificate2 remoteServerCertificate;
         private readonly X509Certificate2 clientCertificate;
+        private readonly X509Certificate2 remoteServerCertificate;
 
         public FileServer()
         {
-            serverCertificate = clientCertificate = SecurityHelper.GetCurrentUserCertificate();
+            serverCertificate = SecurityHelper.GetCertificate(Configuration.ServerSyncCertificateCN);
             if (serverCertificate == null)
-                throw new ApplicationException("Local server/client certificate not found or invalid.");
+                throw new ApplicationException($"Local server certificate '{Configuration.ServerSyncCertificateCN}' not found or invalid.");
 
-            string currentCN = SecurityHelper.GetName(serverCertificate);
-            string remoteCN = currentCN == Configuration.PrimaryServerCN ? Configuration.BackupServerCN : Configuration.PrimaryServerCN;
-            remoteServerCertificate = SecurityHelper.GetCertificate(StoreName.TrustedPeople, StoreLocation.LocalMachine, remoteCN);
+            clientCertificate = SecurityHelper.GetCertificate(Configuration.ClientSyncCertificateCN);
+            if (clientCertificate == null)
+                throw new ApplicationException($"Client certificate '{Configuration.ClientSyncCertificateCN}' not found or invalid.");
+
+            remoteServerCertificate = SecurityHelper.GetCertificate(Configuration.RemoteServerSyncCertificateCN);
             if (remoteServerCertificate == null)
-                throw new ApplicationException($"Remote certificate '{remoteCN}' not found or invalid.");
+                throw new ApplicationException($"Remote certificate '{Configuration.RemoteServerSyncCertificateCN}' not found or invalid.");
 
-            bool primaryUp = !IsPortAvailable(new Uri(Configuration.PrimaryServerSyncAddress).Port);
-            bool backupUp = !IsPortAvailable(new Uri(Configuration.BackupServerSyncAddress).Port);
+            bool primaryUp = !IsPortAvailable(new Uri(Configuration.PrimaryServerAddress).Port);
+            bool backupUp = !IsPortAvailable(new Uri(Configuration.BackupServerAddress).Port);
 
             if (primaryUp && backupUp)
                 throw new ApplicationException("Both sync services are running. Cannot start another server.");
@@ -45,22 +47,22 @@ namespace Server.Infrastructure
             {
                 role = ServerRole.Backup;
                 fileAddress = Configuration.BackupServerAddress;
-                syncAddress = Configuration.BackupServerSyncAddress;
-                remoteSyncAddress = Configuration.PrimaryServerSyncAddress;
+                syncAddress = Configuration.ServerSyncAddress;
+                remoteSyncAddress = Configuration.ServerSyncAddress;
             }
             else if (backupUp)
             {
                 role = ServerRole.Backup;
                 fileAddress = Configuration.PrimaryServerAddress;
-                syncAddress = Configuration.PrimaryServerSyncAddress;
-                remoteSyncAddress = Configuration.BackupServerSyncAddress;
+                syncAddress = Configuration.ServerSyncAddress;
+                remoteSyncAddress = Configuration.ServerSyncAddress;
             }
             else
             {
                 role = ServerRole.Primary;
                 fileAddress = Configuration.PrimaryServerAddress;
-                syncAddress = Configuration.PrimaryServerSyncAddress;
-                remoteSyncAddress = Configuration.BackupServerSyncAddress;
+                syncAddress = Configuration.ServerSyncAddress;
+                remoteSyncAddress = Configuration.ServerSyncAddress;
             }
         }
 

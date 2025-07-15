@@ -30,6 +30,11 @@ namespace Server.Authorization
                     }
                     throw new Exception("[CertificateValidator] Certificate chain build failed.");
                 }
+
+                if (chain.ChainElements.Count > 0 && chain.ChainElements[0].Certificate.Subject == chain.ChainElements[chain.ChainElements.Count - 1].Certificate.Subject)
+                {
+                    throw new Exception("[CertificateValidator] Certificate is self-signed.");
+                }
             }
             catch (Exception ex)
             {

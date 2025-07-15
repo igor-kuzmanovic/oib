@@ -14,8 +14,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.gitignore = .gitignore
 		Projektni zadatak - Datoteke.pdf = Projektni zadatak - Datoteke.pdf
 		README.md = README.md
-		run-client.ps1 = run-client.ps1
-		run-server.ps1 = run-server.ps1
 	EndProjectSection
 EndProject
 Global
