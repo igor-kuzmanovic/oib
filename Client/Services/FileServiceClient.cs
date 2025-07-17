@@ -73,44 +73,44 @@ namespace Client.Services
 
         private T ExecuteWithFailover<T>(Func<T> operation, string operationName)
         {
-            try
+            while (true)
             {
-                if (IsChannelFaulted()) CreateServiceProxy();
-                return operation();
-            }
-            catch (SecurityAccessDeniedException ex)
-            {
-                Console.WriteLine($"Core security error in '{operationName}': {ex.Message}");
-                return default;
-            }
-            catch (FaultException<FileSecurityException> ex)
-            {
-                Console.WriteLine($"Security error in '{operationName}': {ex.Detail.Message}");
-                return default;
-            }
-            catch (FaultException<FileSystemException> ex)
-            {
-                Console.WriteLine($"File system error in '{operationName}': {ex.Detail.Message}");
-                return default;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Unexpected error of type {ex.GetType()} in '{operationName}': {ex.Message}. Trying failover.");
-                return RetryOnFailover(operation, operationName);
-            }
-        }
+                try
+                {
+                    if (IsChannelFaulted())
+                        CreateServiceProxy();
 
-        private T RetryOnFailover<T>(Func<T> operation, string operationName)
-        {
-            try
-            {
-                SwitchServer();
-                return operation();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failover failed in '{operationName}': {ex.Message}");
-                throw;
+                    return operation();
+                }
+                catch (SecurityAccessDeniedException ex)
+                {
+                    Console.WriteLine($"Core security error in '{operationName}': {ex.Message}");
+                    return default;
+                }
+                catch (FaultException<FileSecurityException> ex)
+                {
+                    Console.WriteLine($"Security error in '{operationName}': {ex.Detail.Message}");
+                    return default;
+                }
+                catch (FaultException<FileSystemException> ex)
+                {
+                    Console.WriteLine($"File system error in '{operationName}': {ex.Detail.Message}");
+                    return default;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Unexpected error in '{operationName}': {ex.Message}. Trying failover.");
+
+                    SwitchServer();
+
+                    Console.WriteLine("Press ESC to stop retrying or any other key to retry failover...");
+                    var key = Console.ReadKey(intercept: true);
+                    if (key.Key == ConsoleKey.Escape)
+                    {
+                        Console.WriteLine("User pressed ESC, stopping retries.");
+                        throw;
+                    }
+                }
             }
         }
 
