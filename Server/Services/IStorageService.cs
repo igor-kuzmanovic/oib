@@ -1,4 +1,5 @@
 using Contracts.Models;
+using System.ServiceModel;
 
 namespace Server.Services
 {
@@ -11,5 +12,9 @@ namespace Server.Services
         bool Delete(string path);
         bool Rename(string sourcePath, string destinationPath);
         bool MoveTo(string sourcePath, string destinationPath);
+        int GetLastEventId();
+        void SetLastEventId(int id);
+        StorageEvent[] GetEventsSinceId(int lastId);
+        void ApplyEvent(StorageEvent ev);
     }
 }

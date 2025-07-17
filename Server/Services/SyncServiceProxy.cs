@@ -1,9 +1,10 @@
-using System;
-using System.ServiceModel;
-using System.Security.Cryptography.X509Certificates;
-using System.ServiceModel.Security;
 using Contracts.Helpers;
+using Contracts.Models;
 using Server.Authorization;
+using System;
+using System.Security.Cryptography.X509Certificates;
+using System.ServiceModel;
+using System.ServiceModel.Security;
 
 namespace Server.Services
 {
@@ -39,18 +40,18 @@ namespace Server.Services
             proxy = factory.CreateChannel();
         }
 
-        public bool Ping()
+        public StorageEvent[] GetEventsSinceId(int lastEventId)
         {
             try
             {
-                return proxy.Ping();
+                return proxy.GetEventsSinceId(lastEventId);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[SyncServiceProxy] Ping failed: {ex.Message}");
+                Console.WriteLine($"[SyncServiceProxy] GetEventsSinceId failed: {ex.Message}");
                 if (ex.InnerException != null)
                     Console.WriteLine($"[SyncServiceProxy] Inner: {ex.InnerException.Message}");
-                return false;
+                return Array.Empty<StorageEvent>();
             }
         }
 

@@ -51,6 +51,7 @@ namespace Server.Infrastructure
                 fileAddress = Configuration.BackupServerAddress;
                 syncAddress = Configuration.ServerSyncAddress;
                 remoteSyncAddress = Configuration.ServerSyncAddress;
+                StorageServiceProvider.Initialize(Configuration.BackupDataDirectory);
             }
             else if (backupUp)
             {
@@ -59,6 +60,7 @@ namespace Server.Infrastructure
                 fileAddress = Configuration.PrimaryServerAddress;
                 syncAddress = Configuration.ServerSyncAddress;
                 remoteSyncAddress = Configuration.ServerSyncAddress;
+                StorageServiceProvider.Initialize(Configuration.PrimaryDataDirectory);
             }
             else
             {
@@ -67,6 +69,7 @@ namespace Server.Infrastructure
                 fileAddress = Configuration.PrimaryServerAddress;
                 syncAddress = Configuration.ServerSyncAddress;
                 remoteSyncAddress = Configuration.ServerSyncAddress;
+                StorageServiceProvider.Initialize(Configuration.PrimaryDataDirectory);
             }
         }
 
@@ -78,18 +81,21 @@ namespace Server.Infrastructure
             }
             else
             {
-                behavior = new BackupServerBehavior(fileAddress, syncAddress, remoteSyncAddress, clientCertificate, remoteServerCertificate, PromoteToPrimary);
+                behavior = new BackupServerBehavior(remoteSyncAddress, clientCertificate, remoteServerCertificate);
             }
             behavior.Start();
             Console.WriteLine($"Server started as {role}");
         }
 
-        public void TryPromoteIfPrimaryDown()
+        public void SyncAndPromoteToPrimaryIfDown()
         {
-            if (role == ServerRole.Backup && behavior is BackupServerBehavior backup && !backup.IsRemotePrimaryAlive())
+            if (role == ServerRole.Backup && behavior is BackupServerBehavior backup)
             {
-                behavior.Stop();
-                PromoteToPrimary();
+                if (!backup.TrySyncWithPrimary())
+                {
+                    behavior.Stop();
+                    PromoteToPrimary();
+                }
             }
         }
 

@@ -1,27 +1,32 @@
+using Contracts.Authorization;
+using Contracts.Encryption;
+using Contracts.Exceptions;
+using Contracts.Helpers;
+using Contracts.Models;
+using Server.Audit;
+using Server.Authorization;
+using Server.Infrastructure;
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Principal;
 using System.ServiceModel;
 using System.Threading;
-using Contracts.Models;
-using Contracts.Exceptions;
-using Contracts.Encryption;
-using Contracts.Authorization;
-using Contracts.Helpers;
-using Server.Authorization;
-using Server.Infrastructure;
-using Server.Audit;
 
 namespace Server.Services
 {
     public class FileStorageService : IStorageService
     {
         private readonly string dataDirectory;
+        private readonly List<StorageEvent> eventStore = new List<StorageEvent>();
+        private int lastEventId = 0;
 
-        public FileStorageService()
+        public FileStorageService(string dataDirectory)
         {
-            dataDirectory = Configuration.DataDirectory;
+            this.dataDirectory = dataDirectory ?? throw new ArgumentNullException(nameof(dataDirectory));
+            Directory.CreateDirectory(this.dataDirectory);
         }
 
         private string ResolvePath(string relativePath)
@@ -34,7 +39,8 @@ namespace Server.Services
             return safePath;
         }
 
-        public bool CreateFile(string path, byte[] content)
+        public bool CreateFile(string path, byte[] content) => CreateFile(path, content, true);
+        private bool CreateFile(string path, byte[] content, bool appendEvent)
         {
             if (!path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
                 throw new Exception("Only .txt files are supported.");
@@ -47,19 +53,38 @@ namespace Server.Services
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                 Directory.CreateDirectory(directory);
             File.WriteAllBytes(resolvedPath, content);
+
+            if (appendEvent)
+                AppendEvent(new StorageEvent
+                {
+                    EventType = StorageEventType.CreateFile,
+                    SourcePath = path,
+                    Content = content
+                });
+
             return true;
         }
 
-        public bool CreateFolder(string path)
+        public bool CreateFolder(string path) => CreateFolder(path, true);
+        private bool CreateFolder(string path, bool appendEvent)
         {
             string resolvedPath = ResolvePath(path);
             if (Directory.Exists(resolvedPath) || File.Exists(resolvedPath))
                 throw new Exception("File or folder already exists at the specified path.");
             Directory.CreateDirectory(resolvedPath);
+
+            if (appendEvent)
+                AppendEvent(new StorageEvent
+                {
+                    EventType = StorageEventType.CreateFolder,
+                    SourcePath = path
+                });
+
             return true;
         }
 
-        public bool Delete(string path)
+        public bool Delete(string path) => Delete(path, true);
+        private bool Delete(string path, bool appendEvent)
         {
             string resolvedPath = ResolvePath(path);
             bool isFile = File.Exists(resolvedPath);
@@ -67,17 +92,30 @@ namespace Server.Services
             if (isFile)
             {
                 File.Delete(resolvedPath);
+                if (appendEvent)
+                    AppendEvent(new StorageEvent
+                    {
+                        EventType = StorageEventType.Delete,
+                        SourcePath = path
+                    });
                 return true;
             }
             if (isDirectory)
             {
                 Directory.Delete(resolvedPath, true);
+                if (appendEvent)
+                    AppendEvent(new StorageEvent
+                    {
+                        EventType = StorageEventType.Delete,
+                        SourcePath = path
+                    });
                 return true;
             }
             throw new Exception("File or folder does not exist at the specified path.");
         }
 
-        public bool MoveTo(string sourcePath, string destinationPath)
+        public bool MoveTo(string sourcePath, string destinationPath) => MoveTo(sourcePath, destinationPath, true);
+        private bool MoveTo(string sourcePath, string destinationPath, bool appendEvent)
         {
             string resolvedSourcePath = ResolvePath(sourcePath);
             string resolvedDestinationPath = ResolvePath(destinationPath);
@@ -91,6 +129,13 @@ namespace Server.Services
                 if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
                     Directory.CreateDirectory(destDir);
                 File.Move(resolvedSourcePath, resolvedDestinationPath);
+                if (appendEvent)
+                    AppendEvent(new StorageEvent
+                    {
+                        EventType = StorageEventType.Move,
+                        SourcePath = sourcePath,
+                        DestinationPath = destinationPath
+                    });
                 return true;
             }
             if (isDirectory)
@@ -99,15 +144,19 @@ namespace Server.Services
                 if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
                     Directory.CreateDirectory(destDir);
                 Directory.Move(resolvedSourcePath, resolvedDestinationPath);
+                if (appendEvent)
+                    AppendEvent(new StorageEvent
+                    {
+                        EventType = StorageEventType.Move,
+                        SourcePath = sourcePath,
+                        DestinationPath = destinationPath
+                    });
                 return true;
             }
             throw new Exception("Source file or folder does not exist at the specified path.");
         }
 
-        public bool Rename(string sourcePath, string destinationPath)
-        {
-            return MoveTo(sourcePath, destinationPath);
-        }
+        public bool Rename(string sourcePath, string destinationPath) => MoveTo(sourcePath, destinationPath);
 
         public FileData ReadFile(string path)
         {
@@ -183,6 +232,59 @@ namespace Server.Services
                 .Distinct()
                 .ToArray();
             return entries;
+        }
+
+        public int GetLastEventId()
+        {
+            return lastEventId;
+        }
+
+        public void SetLastEventId(int eventId)
+        {
+            if (eventId > lastEventId)
+                lastEventId = eventId;
+        }
+
+        public StorageEvent[] GetEventsSinceId(int lastId)
+        {
+            return eventStore.Where(e => e.Id > lastId).OrderBy(e => e.Id).ToArray();
+        }
+
+        public void ApplyEvent(StorageEvent ev)
+        {
+            switch (ev.EventType)
+            {
+                case StorageEventType.CreateFile:
+                    if (!File.Exists(ResolvePath(ev.SourcePath)))
+                        CreateFile(ev.SourcePath, ev.Content, appendEvent: false);
+                    break;
+
+                case StorageEventType.CreateFolder:
+                    if (!Directory.Exists(ResolvePath(ev.SourcePath)))
+                        CreateFolder(ev.SourcePath, appendEvent: false);
+                    break;
+
+                case StorageEventType.Delete:
+                    try { Delete(ev.SourcePath, appendEvent: false); } catch { }
+                    break;
+
+                case StorageEventType.Move:
+                case StorageEventType.Rename:
+                    try
+                    {
+                        MoveTo(ev.SourcePath, ev.DestinationPath, appendEvent: false);
+                    }
+                    catch { }
+                    break;
+            }
+        }
+
+        private StorageEvent AppendEvent(StorageEvent ev)
+        {
+            ev.Id = ++lastEventId;
+            ev.Timestamp = DateTime.UtcNow;
+            eventStore.Add(ev);
+            return ev;
         }
     }
 }

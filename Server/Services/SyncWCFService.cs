@@ -1,14 +1,17 @@
 using System;
 using System.ServiceModel;
+using Contracts.Models;
 
 namespace Server.Services
 {
     public class SyncWCFService : ISyncWCFService
     {
-        public bool Ping()
+        private static readonly IStorageService storageService = StorageServiceProvider.Instance;
+
+        public StorageEvent[] GetEventsSinceId(int lastEventId)
         {
-            Console.WriteLine("[SyncWCFService] Ping received");
-            return true;
+            Console.WriteLine($"[SyncWCFService] GetEventsSinceId called with lastEventId: {lastEventId}");
+            return storageService.GetEventsSinceId(lastEventId);
         }
     }
 }

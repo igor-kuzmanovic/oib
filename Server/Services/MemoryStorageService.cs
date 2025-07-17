@@ -10,6 +10,8 @@ namespace Server.Services
     public class MemoryStorageService : IStorageService
     {
         private readonly Dictionary<string, FileData> entries = new Dictionary<string, FileData>(StringComparer.OrdinalIgnoreCase);
+        private readonly List<StorageEvent> eventStore = new List<StorageEvent>();
+        private int lastEventId = 0;
 
         public MemoryStorageService()
         {
@@ -27,7 +29,8 @@ namespace Server.Services
             return path.TrimStart('/', '\\');
         }
 
-        public bool CreateFile(string path, byte[] content)
+        public bool CreateFile(string path, byte[] content) => CreateFile(path, content, true);
+        private bool CreateFile(string path, byte[] content, bool appendEvent)
         {
             path = NormalizePath(path);
             if (!path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
@@ -48,10 +51,20 @@ namespace Server.Services
                 CreatedAt = DateTime.UtcNow,
                 IsFile = true
             };
+
+            if (appendEvent)
+                AppendEvent(new StorageEvent
+                {
+                    EventType = StorageEventType.CreateFile,
+                    SourcePath = path,
+                    Content = content
+                });
+
             return true;
         }
 
-        public bool CreateFolder(string path)
+        public bool CreateFolder(string path) => CreateFolder(path, true);
+        private bool CreateFolder(string path, bool appendEvent)
         {
             path = NormalizePath(path);
             if (entries.ContainsKey(path))
@@ -68,6 +81,14 @@ namespace Server.Services
                 CreatedAt = DateTime.UtcNow,
                 IsFile = false
             };
+
+            if (appendEvent)
+                AppendEvent(new StorageEvent
+                {
+                    EventType = StorageEventType.CreateFolder,
+                    SourcePath = path
+                });
+
             return true;
         }
 
@@ -85,7 +106,8 @@ namespace Server.Services
             return winIdentity.Name;
         }
 
-        public bool Delete(string path)
+        public bool Delete(string path) => Delete(path, true);
+        private bool Delete(string path, bool appendEvent)
         {
             path = NormalizePath(path);
             if (!entries.ContainsKey(path))
@@ -94,15 +116,32 @@ namespace Server.Services
             if (entry.IsFile)
             {
                 entries.Remove(path);
+                if (appendEvent)
+                    AppendEvent(new StorageEvent
+                    {
+                        EventType = StorageEventType.Delete,
+                        SourcePath = path
+                    });
                 return true;
             }
-            var toRemove = entries.Keys.Where(k => k == path || k.StartsWith(path + "/", StringComparison.OrdinalIgnoreCase) || k.StartsWith(path + "\\", StringComparison.OrdinalIgnoreCase)).ToList();
+            var toRemove = entries.Keys.Where(k => k == path
+                || k.StartsWith(path + "/", StringComparison.OrdinalIgnoreCase)
+                || k.StartsWith(path + "\\", StringComparison.OrdinalIgnoreCase)).ToList();
             foreach (var k in toRemove)
                 entries.Remove(k);
+
+            if (appendEvent)
+                AppendEvent(new StorageEvent
+                {
+                    EventType = StorageEventType.Delete,
+                    SourcePath = path
+                });
+
             return true;
         }
 
-        public bool MoveTo(string sourcePath, string destinationPath)
+        public bool MoveTo(string sourcePath, string destinationPath) => MoveTo(sourcePath, destinationPath, true);
+        private bool MoveTo(string sourcePath, string destinationPath, bool appendEvent)
         {
             sourcePath = NormalizePath(sourcePath);
             destinationPath = NormalizePath(destinationPath);
@@ -125,9 +164,18 @@ namespace Server.Services
                     IsFile = true
                 };
                 entries.Remove(sourcePath);
+                if (appendEvent)
+                    AppendEvent(new StorageEvent
+                    {
+                        EventType = StorageEventType.Move,
+                        SourcePath = sourcePath,
+                        DestinationPath = destinationPath
+                    });
                 return true;
             }
-            var toMove = entries.Keys.Where(k => k == sourcePath || k.StartsWith(sourcePath + "/", StringComparison.OrdinalIgnoreCase) || k.StartsWith(sourcePath + "\\", StringComparison.OrdinalIgnoreCase)).ToList();
+            var toMove = entries.Keys.Where(k => k == sourcePath
+                || k.StartsWith(sourcePath + "/", StringComparison.OrdinalIgnoreCase)
+                || k.StartsWith(sourcePath + "\\", StringComparison.OrdinalIgnoreCase)).ToList();
             foreach (var k in toMove)
             {
                 var e = entries[k];
@@ -142,13 +190,19 @@ namespace Server.Services
                 };
                 entries.Remove(k);
             }
+
+            if (appendEvent)
+                AppendEvent(new StorageEvent
+                {
+                    EventType = StorageEventType.Move,
+                    SourcePath = sourcePath,
+                    DestinationPath = destinationPath
+                });
+
             return true;
         }
 
-        public bool Rename(string sourcePath, string destinationPath)
-        {
-            return MoveTo(sourcePath, destinationPath);
-        }
+        public bool Rename(string sourcePath, string destinationPath) => MoveTo(sourcePath, destinationPath);
 
         public FileData ReadFile(string path)
         {
@@ -189,6 +243,60 @@ namespace Server.Services
                 kvp.Value.Path = kvp.Key;
                 return kvp.Value;
             }).ToArray();
+        }
+
+        public int GetLastEventId()
+        {
+            return lastEventId;
+        }
+
+        public void SetLastEventId(int eventId)
+        {
+            if (eventId > lastEventId)
+                lastEventId = eventId;
+        }
+
+        public StorageEvent[] GetEventsSinceId(int lastId)
+        {
+            return eventStore.Where(e => e.Id > lastId).OrderBy(e => e.Id).ToArray();
+        }
+
+        public void ApplyEvent(StorageEvent ev)
+        {
+            switch (ev.EventType)
+            {
+                case StorageEventType.CreateFile:
+                    if (!entries.ContainsKey(ev.SourcePath))
+                        CreateFile(ev.SourcePath, ev.Content, appendEvent: false);
+                    break;
+
+                case StorageEventType.CreateFolder:
+                    if (!entries.ContainsKey(ev.SourcePath))
+                        CreateFolder(ev.SourcePath, appendEvent: false);
+                    break;
+
+                case StorageEventType.Delete:
+                    if (entries.ContainsKey(ev.SourcePath))
+                        Delete(ev.SourcePath, appendEvent: false);
+                    break;
+
+                case StorageEventType.Move:
+                case StorageEventType.Rename:
+                    try
+                    {
+                        MoveTo(ev.SourcePath, ev.DestinationPath, appendEvent: false);
+                    }
+                    catch { }
+                    break;
+            }
+        }
+
+        private StorageEvent AppendEvent(StorageEvent ev)
+        {
+            ev.Id = ++lastEventId;
+            ev.Timestamp = DateTime.UtcNow;
+            eventStore.Add(ev);
+            return ev;
         }
     }
 }

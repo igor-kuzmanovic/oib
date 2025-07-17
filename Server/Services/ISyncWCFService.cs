@@ -1,3 +1,4 @@
+using Contracts.Models;
 using System.ServiceModel;
 
 namespace Server.Services
@@ -6,6 +7,6 @@ namespace Server.Services
     public interface ISyncWCFService
     {
         [OperationContract]
-        bool Ping();
+        StorageEvent[] GetEventsSinceId(int lastId);
     }
 }

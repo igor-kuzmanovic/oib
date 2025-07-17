@@ -1,5 +1,6 @@
 using System;
 using System.Security.Principal;
+using System.Threading;
 using Server.Infrastructure;
 
 namespace Server
@@ -22,8 +23,8 @@ namespace Server
                 Console.WriteLine("Press Enter to stop the server...");
                 while (!Console.KeyAvailable)
                 {
-                    fileServer.TryPromoteIfPrimaryDown();
-                    System.Threading.Thread.Sleep(1000); // Poll every second
+                    fileServer.SyncAndPromoteToPrimaryIfDown();
+                    Thread.Sleep(5000); // Poll every 5 seconds
                 }
                 Console.ReadLine();
             }

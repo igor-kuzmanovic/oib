@@ -6,11 +6,6 @@ namespace Server.Infrastructure
 {
     public static class Configuration
     {
-        static Configuration()
-        {
-            EnsureDirectoriesExist();
-        }
-
         public static string PrimaryServerAddress => ConfigurationManager.AppSettings["PrimaryServerAddress"] ?? "net.tcp://localhost:9999/FileWCFService";
         public static string BackupServerAddress => ConfigurationManager.AppSettings["BackupServerAddress"] ?? "net.tcp://localhost:8888/FileWCFService";
 
@@ -21,14 +16,10 @@ namespace Server.Infrastructure
         public static string RemoteServerSyncCertificateCN => ConfigurationManager.AppSettings["RemoteServerSyncCertificateCN"] ?? "FileServerAlpha";
 
         public static string StorageService => ConfigurationManager.AppSettings["StorageService"] ?? "MemoryStorageService";
-        public static string DataDirectory => ConfigurationManager.AppSettings["DataDirectory"] ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..\\..\\..\\Files");
+        public static string PrimaryDataDirectory => ConfigurationManager.AppSettings["PrimaryDataDirectory"] ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PrimaryFiles");
+        public static string BackupDataDirectory => ConfigurationManager.AppSettings["BackupDataDirectory"] ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BackupFiles");
 
         public static string AuditSourceName => ConfigurationManager.AppSettings["AuditSourceName"] ?? "FileServer.Audit";
         public static string AuditLogName => ConfigurationManager.AppSettings["AuditLogName"] ?? "FileServerAuditLog";
-
-        public static void EnsureDirectoriesExist()
-        {
-            Directory.CreateDirectory(DataDirectory);
-        }
     }
 }

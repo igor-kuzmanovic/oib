@@ -40,6 +40,7 @@
     </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.IdentityModel" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -69,6 +70,7 @@
     <Compile Include="Infrastructure\IServerBehavior.cs" />
     <Compile Include="Infrastructure\PrimaryServerBehavior.cs" />
     <Compile Include="Infrastructure\ServerRole.cs" />
+    <Compile Include="Models\StorageEvent.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Services\FileStorageService.cs" />
