@@ -5,6 +5,7 @@ using Contracts.Models;
 using System;
 using System.Security.Principal;
 using System.ServiceModel;
+using System.ServiceModel.Security;
 
 namespace Client.Services
 {
@@ -26,7 +27,7 @@ namespace Client.Services
                     Mode = SecurityMode.Transport,
                     Transport =
                     {
-                        ClientCredentialType = TcpClientCredentialType.Windows
+                        ClientCredentialType = TcpClientCredentialType.Windows,
                     }
                 }
             };
@@ -76,6 +77,11 @@ namespace Client.Services
             {
                 if (IsChannelFaulted()) CreateServiceProxy();
                 return operation();
+            }
+            catch (SecurityAccessDeniedException ex)
+            {
+                Console.WriteLine($"Core security error in '{operationName}': {ex.Message}");
+                return default;
             }
             catch (FaultException<FileSecurityException> ex)
             {

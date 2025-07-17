@@ -4,6 +4,7 @@ using Server.Services;
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.ServiceModel;
@@ -45,6 +46,7 @@ namespace Server.Infrastructure
 
             if (primaryUp)
             {
+                Console.WriteLine("Server on primary address is running. Configuring as backup with backup address.");
                 role = ServerRole.Backup;
                 fileAddress = Configuration.BackupServerAddress;
                 syncAddress = Configuration.ServerSyncAddress;
@@ -52,6 +54,7 @@ namespace Server.Infrastructure
             }
             else if (backupUp)
             {
+                Console.WriteLine("Server on backup address is running. Configuring as backup with primary address.");
                 role = ServerRole.Backup;
                 fileAddress = Configuration.PrimaryServerAddress;
                 syncAddress = Configuration.ServerSyncAddress;
@@ -59,6 +62,7 @@ namespace Server.Infrastructure
             }
             else
             {
+                Console.WriteLine("No servers running. Configuring as primary with primary address.");
                 role = ServerRole.Primary;
                 fileAddress = Configuration.PrimaryServerAddress;
                 syncAddress = Configuration.ServerSyncAddress;
@@ -99,21 +103,18 @@ namespace Server.Infrastructure
 
         private static bool IsPortAvailable(int port)
         {
-            TcpListener listener = null;
-            try
+            var ipProperties = IPGlobalProperties.GetIPGlobalProperties();
+            var tcpConnections = ipProperties.GetActiveTcpListeners();
+
+            foreach (var endpoint in tcpConnections)
             {
-                listener = new TcpListener(IPAddress.Loopback, port);
-                listener.Start();
-                return true;
+                if (endpoint.Port == port)
+                {
+                    Console.WriteLine($"Port {port} is already in use by another process.");
+                    return false;
+                }
             }
-            catch (SocketException)
-            {
-                return false;
-            }
-            finally
-            {
-                listener?.Stop();
-            }
+            return true;
         }
 
         public void Stop()

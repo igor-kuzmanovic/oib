@@ -3,6 +3,7 @@ using Server.Authorization;
 using Server.Services;
 using System;
 using System.Collections.Generic;
+using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.ServiceModel;
 using System.ServiceModel.Description;
@@ -54,17 +55,16 @@ namespace Server.Infrastructure
 
             fileHost.Authorization.ServiceAuthorizationManager = new Server.Authorization.AuthorizationManager();
             fileHost.Authorization.PrincipalPermissionMode = PrincipalPermissionMode.Custom;
-            fileHost.Authorization.ImpersonateCallerForAllOperations = false;
             var policies = new List<System.IdentityModel.Policy.IAuthorizationPolicy>
             {
-                new Server.Authorization.AuthorizationPolicy()
+                new AuthorizationPolicy()
             };
             fileHost.Authorization.ExternalAuthorizationPolicies = policies.AsReadOnly();
 
             try
             {
                 fileHost.Open();
-                Console.WriteLine("FileWCFService host started.");
+                Console.WriteLine($"FileWCFService host started at {fileAddress}");
             }
             catch (Exception ex)
             {
@@ -100,7 +100,7 @@ namespace Server.Infrastructure
             try
             {
                 syncHost.Open();
-                Console.WriteLine("SyncWCFService host started.");
+                Console.WriteLine($"SyncWCFService host started at {syncAddress}");
             }
             catch (Exception ex)
             {

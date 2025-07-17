@@ -90,11 +90,11 @@ namespace Contracts.Helpers
             return name;
         }
 
-        public static string GetName(WindowsIdentity identity)
+        public static string GetName(IIdentity identity)
         {
-            Console.WriteLine($"[SecurityHelper] GetName from WindowsIdentity: Name='{identity.Name}'");
+            Console.WriteLine($"[SecurityHelper] GetName from Identity: Name='{identity.Name}'");
             var name = ParseName(identity.Name);
-            Console.WriteLine($"[SecurityHelper] Parsed name from WindowsIdentity: '{name}'");
+            Console.WriteLine($"[SecurityHelper] Parsed name from Identity: '{name}'");
             return name;
         }
 

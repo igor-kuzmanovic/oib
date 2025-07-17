@@ -16,7 +16,7 @@ namespace Server.Services
 {
     public class FileWCFService : IFileWCFService
     {
-        private static readonly IStorageService storageService = new MemoryStorageService();
+        private static readonly IStorageService storageService = StorageServiceProvider.Instance;
 
         public FileData[] ShowFolderContent(string path)
         {
@@ -52,7 +52,7 @@ namespace Server.Services
         public bool CreateFile(string path, FileData fileData)
         {
             var principal = Thread.CurrentPrincipal as Principal;
-            string user = SecurityHelper.GetName(OperationContext.Current);
+            string user = SecurityHelper.GetName(principal.Identity);
             string serverAddress = Configuration.PrimaryServerAddress;
             if (principal == null || !principal.IsInRole(Permission.Change))
             {
@@ -64,8 +64,9 @@ namespace Server.Services
             {
                 var decryptedFileData = EncryptionHelper.DecryptContent(fileData);
                 bool result;
-                using ((principal.Identity as WindowsIdentity).Impersonate())
+                using (WindowsImpersonationContext ctx = (principal.Identity as WindowsIdentity).Impersonate())
                 {
+                    DisplayIdentityInformation();
                     result = storageService.CreateFile(path, decryptedFileData.Content);
                 }
                 AuditFacade.FileCreated(user, path, serverAddress);
@@ -82,7 +83,7 @@ namespace Server.Services
         public bool CreateFolder(string path)
         {
             var principal = Thread.CurrentPrincipal as Principal;
-            string user = SecurityHelper.GetName(OperationContext.Current);
+            string user = SecurityHelper.GetName(principal.Identity);
             string serverAddress = Configuration.PrimaryServerAddress;
             if (principal == null || !principal.IsInRole(Permission.Change))
             {
@@ -93,8 +94,9 @@ namespace Server.Services
             try
             {
                 bool result;
-                using ((principal.Identity as WindowsIdentity).Impersonate())
+                using (WindowsImpersonationContext ctx = (principal.Identity as WindowsIdentity).Impersonate())
                 {
+                    DisplayIdentityInformation();
                     result = storageService.CreateFolder(path);
                 }
                 AuditFacade.FolderCreated(user, path, serverAddress);
@@ -111,7 +113,7 @@ namespace Server.Services
         public bool Delete(string path)
         {
             var principal = Thread.CurrentPrincipal as Principal;
-            string user = SecurityHelper.GetName(OperationContext.Current);
+            string user = SecurityHelper.GetName(principal.Identity);
             string serverAddress = Configuration.PrimaryServerAddress;
             if (principal == null || !principal.IsInRole(Permission.Delete))
             {
@@ -122,8 +124,9 @@ namespace Server.Services
             try
             {
                 bool result;
-                using ((principal.Identity as WindowsIdentity).Impersonate())
+                using (WindowsImpersonationContext ctx = (principal.Identity as WindowsIdentity).Impersonate())
                 {
+                    DisplayIdentityInformation();
                     result = storageService.Delete(path);
                 }
                 AuditFacade.FileDeleted(user, path, serverAddress);
@@ -155,7 +158,7 @@ namespace Server.Services
         public bool MoveTo(string sourcePath, string destinationPath)
         {
             var principal = Thread.CurrentPrincipal as Principal;
-            string user = SecurityHelper.GetName(OperationContext.Current);
+            string user = SecurityHelper.GetName(principal.Identity);
             string serverAddress = Configuration.PrimaryServerAddress;
             if (principal == null || !principal.IsInRole(Permission.Change))
             {
@@ -166,8 +169,9 @@ namespace Server.Services
             try
             {
                 bool result;
-                using ((principal.Identity as WindowsIdentity).Impersonate())
+                using (WindowsImpersonationContext ctx = (principal.Identity as WindowsIdentity).Impersonate())
                 {
+                    DisplayIdentityInformation();
                     result = storageService.MoveTo(sourcePath, destinationPath);
                 }
                 AuditFacade.FileMoved(user, sourcePath, destinationPath, serverAddress);
@@ -184,6 +188,13 @@ namespace Server.Services
         public void Dispose()
         {
 
+        }
+
+        static void DisplayIdentityInformation()
+        {
+            var identity = (Thread.CurrentPrincipal as Principal).Identity as WindowsIdentity;
+            Console.WriteLine($"[Impersonated Identity] {identity.Name}");
+            Console.WriteLine($"[Impersonation Level] {identity.ImpersonationLevel}");
         }
     }
 }

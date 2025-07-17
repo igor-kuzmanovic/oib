@@ -49,8 +49,11 @@ namespace Server.Infrastructure
                     return proxy.Ping();
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"[BackupServerBehavior] Remote primary ping failed: {ex.Message}");
+                if (ex.InnerException != null)
+                    Console.WriteLine($"[BackupServerBehavior] Inner: {ex.InnerException.Message}");
                 return false;
             }
         }

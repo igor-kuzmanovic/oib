@@ -79,6 +79,7 @@
     <Compile Include="Services\ISyncWCFService.cs" />
     <Compile Include="Services\SyncServiceProxy.cs" />
     <Compile Include="Services\SyncWCFService.cs" />
+    <Compile Include="Services\StorageServiceProvider.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

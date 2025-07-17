@@ -363,7 +363,7 @@ MigrationBackup/
 FodyWeavers.xsd
 
 # Files directory content
-Files/*
+Server/bin/Debug/Files/*
 
 # Exclude run scripts
 !Client/bin/Debug/run_reader.bat

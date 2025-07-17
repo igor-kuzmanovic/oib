@@ -20,6 +20,7 @@ namespace Server.Infrastructure
         public static string ClientSyncCertificateCN => ConfigurationManager.AppSettings["ClientSyncCertificateCN"] ?? "FileServerBeta";
         public static string RemoteServerSyncCertificateCN => ConfigurationManager.AppSettings["RemoteServerSyncCertificateCN"] ?? "FileServerAlpha";
 
+        public static string StorageService => ConfigurationManager.AppSettings["StorageService"] ?? "MemoryStorageService";
         public static string DataDirectory => ConfigurationManager.AppSettings["DataDirectory"] ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..\\..\\..\\Files");
 
         public static string AuditSourceName => ConfigurationManager.AppSettings["AuditSourceName"] ?? "FileServer.Audit";
