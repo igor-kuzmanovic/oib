@@ -211,7 +211,7 @@ namespace Server.Audit
             if (customLog != null)
             {
                 string message = AuditEventFile.ServerSynchronized;
-                string formattedMessage = String.Format(message, serverName, remoteServerName, eventCount);
+                string formattedMessage = String.Format(message, serverName, eventCount.ToString(), remoteServerName);
                 customLog.WriteEntry(message, EventLogEntryType.Information, (int)AuditEventTypes.ServerSynchronized);
             }
         }

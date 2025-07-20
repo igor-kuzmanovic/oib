@@ -30,18 +30,18 @@ namespace Server.Authorization
                     {
                         Console.WriteLine($"[CertificateValidator] - {status.StatusInformation.Trim()}");
                     }
-                    throw new Exception("[CertificateValidator] Certificate chain build failed.");
+                    throw new Exception("Certificate chain build failed.");
                 }
 
                 if (chain.ChainElements.Count > 0 && chain.ChainElements[0].Certificate.Subject == chain.ChainElements[chain.ChainElements.Count - 1].Certificate.Subject)
                 {
-                    throw new Exception("[CertificateValidator] Certificate is self-signed.");
+                    throw new Exception("Certificate is self-signed.");
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[CertificateValidator] Certificate validation exception: {ex.Message}");
-                AuditFacade.AuthenticationFailed(SecurityHelper.GetName(certificate), $"[CertificateValidator] Certificate validation exception: {ex.Message}");
+                AuditFacade.AuthenticationFailed(SecurityHelper.GetName(certificate), $"Certificate validation exception: {ex.Message}");
                 throw;
             }
 
