@@ -5,6 +5,7 @@ namespace Server.Authorization
 {
     public interface ICustomPrincipal : IPrincipal
     {
-        bool IsInRole(Permission permission);
+        bool HasRole(Role role);
+        bool HasPermission(Permission permission);
     }
 }

@@ -21,10 +21,10 @@ namespace Server.Authorization
                 return false;
             }
 
-            if (!principal.IsInRole(Permission.See))
+            if (!principal.HasRole(Role.Reader))
             {
-                Console.WriteLine($"[AuthorizationManager] Principal has no permission {Permission.See}");
-                AuditFacade.AuthorizationFailed(SecurityHelper.GetName(principal.Identity), OperationContext.Current.IncomingMessageHeaders.Action, $"Principal has no permission {Permission.See}");
+                Console.WriteLine($"[AuthorizationManager] Principal has no role {Role.Reader}");
+                AuditFacade.AuthorizationFailed(SecurityHelper.GetName(principal.Identity), OperationContext.Current.IncomingMessageHeaders.Action, $"Principal has no role {Role.Reader}");
                 return false;
             }
 

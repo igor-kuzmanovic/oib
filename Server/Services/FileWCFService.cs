@@ -22,7 +22,7 @@ namespace Server.Services
         {
             var principal = Thread.CurrentPrincipal as Principal;
             string user = SecurityHelper.GetName(principal.Identity);
-            if (principal == null || !principal.IsInRole(Permission.See))
+            if (principal == null || !principal.HasPermission(Permission.See))
             {
                 AuditFacade.AuthorizationFailed(user, "ShowFolderContent", "See permission required");
                 throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for ShowFolderContent."));
@@ -46,7 +46,7 @@ namespace Server.Services
         {
             var principal = Thread.CurrentPrincipal as Principal;
             string user = SecurityHelper.GetName(principal.Identity);
-            if (principal == null || !principal.IsInRole(Permission.See))
+            if (principal == null || !principal.HasPermission(Permission.See))
             {
                 AuditFacade.AuthorizationFailed(user, "ReadFile", "See permission required");
                 throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for ReadFile."));
@@ -71,7 +71,7 @@ namespace Server.Services
         {
             var principal = Thread.CurrentPrincipal as Principal;
             string user = SecurityHelper.GetName(principal.Identity);
-            if (principal == null || !principal.IsInRole(Permission.Change))
+            if (principal == null || !principal.HasPermission(Permission.Change))
             {
                 AuditFacade.AuthorizationFailed(user, "CreateFile", "Change permission required");
                 throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for CreateFile."));
@@ -101,7 +101,7 @@ namespace Server.Services
         {
             var principal = Thread.CurrentPrincipal as Principal;
             string user = SecurityHelper.GetName(principal.Identity);
-            if (principal == null || !principal.IsInRole(Permission.Change))
+            if (principal == null || !principal.HasPermission(Permission.Change))
             {
                 AuditFacade.AuthorizationFailed(user, "CreateFolder", "Change permission required");
                 throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for CreateFolder."));
@@ -130,7 +130,7 @@ namespace Server.Services
         {
             var principal = Thread.CurrentPrincipal as Principal;
             string user = SecurityHelper.GetName(principal.Identity);
-            if (principal == null || !principal.IsInRole(Permission.Delete))
+            if (principal == null || !principal.HasPermission(Permission.Delete))
             {
                 AuditFacade.AuthorizationFailed(user, "Delete", "Delete permission required");
                 throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for Delete."));
@@ -166,7 +166,7 @@ namespace Server.Services
         {
             var principal = Thread.CurrentPrincipal as Principal;
             string user = SecurityHelper.GetName(principal.Identity);
-            if (principal == null || !principal.IsInRole(Permission.Change))
+            if (principal == null || !principal.HasPermission(Permission.Change))
             {
                 AuditFacade.AuthorizationFailed(user, "Rename", "Change permission required");
                 throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for Rename."));
@@ -202,7 +202,7 @@ namespace Server.Services
         {
             var principal = Thread.CurrentPrincipal as Principal;
             string user = SecurityHelper.GetName(principal.Identity);
-            if (principal == null || !principal.IsInRole(Permission.Change))
+            if (principal == null || !principal.HasPermission(Permission.Change))
             {
                 AuditFacade.AuthorizationFailed(user, "MoveTo", "Change permission required");
                 throw new FaultException<FileSecurityException>(new FileSecurityException($"User {user} is not authorized for MoveTo."));
