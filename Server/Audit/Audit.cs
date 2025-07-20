@@ -1,6 +1,7 @@
 using Server.Infrastructure;
 using System;
 using System.Diagnostics;
+using System.Net;
 
 namespace Server.Audit
 {
@@ -25,7 +26,7 @@ namespace Server.Audit
             }
         }
 
-        public static void AuthenticationSuccess(string userName, string serverAddress)
+        public static void AuthenticationSuccess(string userName)
         {
             if (customLog != null)
             {
@@ -35,152 +36,182 @@ namespace Server.Audit
             }
         }
 
-        public static void AuthorizationSuccess(string userName, string actionName, string serverAddress)
+        public static void AuthenticationFailed(string userName, string reason)
+        {
+            if (customLog != null)
+            {
+                string message = AuditEventFile.AuthenticationFailed;
+                string formattedMessage = String.Format(message, userName, reason);
+                customLog.WriteEntry(formattedMessage, EventLogEntryType.FailureAudit, (int)AuditEventTypes.AuthenticationFailed);
+            }
+        }
+
+        public static void AuthorizationSuccess(string userName, string actionName)
         {
             if (customLog != null)
             {
                 string message = AuditEventFile.AuthorizationSuccess;
-                string formattedMessage = String.Format(message, userName, actionName, serverAddress);
+                string formattedMessage = String.Format(message, userName, actionName);
                 customLog.WriteEntry(formattedMessage, EventLogEntryType.SuccessAudit, (int)AuditEventTypes.AuthorizationSuccess);
             }
         }
 
-        public static void AuthorizationFailed(string userName, string actionName, string serverAddress, string reason)
+        public static void AuthorizationFailed(string userName, string actionName, string reason)
         {
             if (customLog != null)
             {
                 string message = AuditEventFile.AuthorizationFailed;
-                string formattedMessage = String.Format(message, userName, actionName, serverAddress, reason);
+                string formattedMessage = String.Format(message, userName, actionName, reason);
                 customLog.WriteEntry(formattedMessage, EventLogEntryType.FailureAudit, (int)AuditEventTypes.AuthorizationFailed);
             }
         }
 
-        public static void FileCreated(string userName, string fileName, string serverAddress)
+        public static void FileCreated(string userName, string fileName)
         {
             if (customLog != null)
             {
                 string message = AuditEventFile.FileCreated;
-                string formattedMessage = String.Format(message, userName, fileName, serverAddress);
+                string formattedMessage = String.Format(message, userName, fileName);
                 customLog.WriteEntry(formattedMessage, EventLogEntryType.Information, (int)AuditEventTypes.FileCreated);
             }
         }
 
-        public static void FolderCreated(string userName, string folderName, string serverAddress)
+        public static void FolderCreated(string userName, string folderName)
         {
             if (customLog != null)
             {
                 string message = AuditEventFile.FolderCreated;
-                string formattedMessage = String.Format(message, userName, folderName, serverAddress);
+                string formattedMessage = String.Format(message, userName, folderName);
                 customLog.WriteEntry(formattedMessage, EventLogEntryType.Information, (int)AuditEventTypes.FolderCreated);
             }
         }
 
-        public static void FileDeleted(string userName, string fileName, string serverAddress)
+        public static void FileDeleted(string userName, string fileName)
         {
             if (customLog != null)
             {
                 string message = AuditEventFile.FileDeleted;
-                string formattedMessage = String.Format(message, userName, fileName, serverAddress);
+                string formattedMessage = String.Format(message, userName, fileName);
                 customLog.WriteEntry(formattedMessage, EventLogEntryType.Information, (int)AuditEventTypes.FileDeleted);
             }
         }
 
-        public static void FolderDeleted(string userName, string folderName, string serverAddress)
+        public static void FolderDeleted(string userName, string folderName)
         {
             if (customLog != null)
             {
                 string message = AuditEventFile.FolderDeleted;
-                string formattedMessage = String.Format(message, userName, folderName, serverAddress);
+                string formattedMessage = String.Format(message, userName, folderName);
                 customLog.WriteEntry(formattedMessage, EventLogEntryType.Information, (int)AuditEventTypes.FolderDeleted);
             }
         }
 
-        public static void FileMoved(string userName, string sourceFileName, string destFileName, string serverAddress)
+        public static void FileMoved(string userName, string sourceFileName, string destFileName)
         {
             if (customLog != null)
             {
                 string message = AuditEventFile.FileMoved;
-                string formattedMessage = String.Format(message, userName, sourceFileName, destFileName, serverAddress);
+                string formattedMessage = String.Format(message, userName, sourceFileName, destFileName);
                 customLog.WriteEntry(formattedMessage, EventLogEntryType.Information, (int)AuditEventTypes.FileMoved);
             }
         }
 
-        public static void FolderMoved(string userName, string sourceFolderName, string destFolderName, string serverAddress)
+        public static void FileRenamed(string userName, string oldFileName, string newFileName)
+        {
+            if (customLog != null)
+            {
+                string message = AuditEventFile.FileRenamed;
+                string formattedMessage = String.Format(message, userName, oldFileName, newFileName);
+                customLog.WriteEntry(formattedMessage, EventLogEntryType.Information, (int)AuditEventTypes.FileRenamed);
+            }
+        }
+
+        public static void FolderMoved(string userName, string sourceFolderName, string destFolderName)
         {
             if (customLog != null)
             {
                 string message = AuditEventFile.FolderMoved;
-                string formattedMessage = String.Format(message, userName, sourceFolderName, destFolderName, serverAddress);
+                string formattedMessage = String.Format(message, userName, sourceFolderName, destFolderName);
                 customLog.WriteEntry(formattedMessage, EventLogEntryType.Information, (int)AuditEventTypes.FolderMoved);
             }
         }
 
-        public static void FileAccessed(string userName, string fileName, string serverAddress)
+        public static void FolderRenamed(string userName, string oldFolderName, string newFolderName)
+        {
+            if (customLog != null)
+            {
+                string message = AuditEventFile.FolderRenamed;
+                string formattedMessage = String.Format(message, userName, oldFolderName, newFolderName);
+                customLog.WriteEntry(formattedMessage, EventLogEntryType.Information, (int)AuditEventTypes.FolderRenamed);
+            }
+        }
+
+        public static void FileAccessed(string userName, string fileName)
         {
             if (customLog != null)
             {
                 string message = AuditEventFile.FileAccessed;
-                string formattedMessage = String.Format(message, userName, fileName, serverAddress);
+                string formattedMessage = String.Format(message, userName, fileName);
                 customLog.WriteEntry(formattedMessage, EventLogEntryType.Information, (int)AuditEventTypes.FileAccessed);
             }
         }
 
-        public static void FolderAccessed(string userName, string folderName, string serverAddress)
+        public static void FolderAccessed(string userName, string folderName)
         {
             if (customLog != null)
             {
                 string message = AuditEventFile.FolderAccessed;
-                string formattedMessage = String.Format(message, userName, folderName, serverAddress);
+                string formattedMessage = String.Format(message, userName, folderName);
                 customLog.WriteEntry(formattedMessage, EventLogEntryType.Information, (int)AuditEventTypes.FolderAccessed);
             }
         }
 
-        public static void ServerStarted(string serverAddress)
+        public static void ServerStarted(string serverName)
         {
             if (customLog != null)
             {
                 string message = AuditEventFile.ServerStarted;
-                string formattedMessage = String.Format(message, serverAddress);
+                string formattedMessage = String.Format(message, serverName);
                 customLog.WriteEntry(formattedMessage, EventLogEntryType.Information, (int)AuditEventTypes.ServerStarted);
             }
         }
 
-        public static void ServerStopped(string serverAddress)
+        public static void ServerStopped(string serverName)
         {
             if (customLog != null)
             {
                 string message = AuditEventFile.ServerStopped;
-                string formattedMessage = String.Format(message, serverAddress);
+                string formattedMessage = String.Format(message, serverName);
                 customLog.WriteEntry(formattedMessage, EventLogEntryType.Information, (int)AuditEventTypes.ServerStopped);
             }
         }
 
-        public static void ServerError(string errorMessage, string serverAddress)
+        public static void ServerError(string errorMessage)
         {
             if (customLog != null)
             {
                 string message = AuditEventFile.ServerError;
-                string formattedMessage = String.Format(message, errorMessage, serverAddress);
+                string formattedMessage = String.Format(message, errorMessage);
                 customLog.WriteEntry(formattedMessage, EventLogEntryType.Error, (int)AuditEventTypes.ServerError);
             }
         }
 
-        public static void ServerTransitioned(string oldAddress, string newAddress)
+        public static void ServerTransitioned(string serverName)
         {
             if (customLog != null)
             {
                 string message = AuditEventFile.ServerTransitioned;
-                string formattedMessage = String.Format(message, oldAddress, newAddress);
+                string formattedMessage = String.Format(message, serverName);
                 customLog.WriteEntry(formattedMessage, EventLogEntryType.Information, (int)AuditEventTypes.ServerTransitioned);
             }
         }
 
-        public static void ServerSynchronized(string fromAddress, string toAddress)
+        public static void ServerSynchronized(string serverName, string remoteServerName, int eventCount)
         {
             if (customLog != null)
             {
                 string message = AuditEventFile.ServerSynchronized;
-                string formattedMessage = String.Format(message, fromAddress, toAddress);
+                string formattedMessage = String.Format(message, serverName, remoteServerName, eventCount);
                 customLog.WriteEntry(message, EventLogEntryType.Information, (int)AuditEventTypes.ServerSynchronized);
             }
         }

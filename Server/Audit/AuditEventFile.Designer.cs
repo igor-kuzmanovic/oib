@@ -61,7 +61,16 @@ namespace Server.Audit {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to User {0} successfully authenticated on server {1}..
+        ///   Looks up a localized string similar to User {0} unsuccessfully authenticated. Reason: {1}..
+        /// </summary>
+        public static string AuthenticationFailed {
+            get {
+                return ResourceManager.GetString("AuthenticationFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to User {0} successfully authenticated..
         /// </summary>
         public static string AuthenticationSuccess {
             get {
@@ -70,7 +79,7 @@ namespace Server.Audit {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to User {0} unsuccessfully authorized for {1} on server {2}. Reason: {3}..
+        ///   Looks up a localized string similar to User {0} unsuccessfully authorized for {1}. Reason: {2}..
         /// </summary>
         public static string AuthorizationFailed {
             get {
@@ -79,7 +88,7 @@ namespace Server.Audit {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to User {0} successfully authorized for {1} on server {2}..
+        ///   Looks up a localized string similar to User {0} successfully authorized for {1}..
         /// </summary>
         public static string AuthorizationSuccess {
             get {
@@ -88,7 +97,7 @@ namespace Server.Audit {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to User {0} accessed file {1} on server {2}..
+        ///   Looks up a localized string similar to User {0} accessed file {1}..
         /// </summary>
         public static string FileAccessed {
             get {
@@ -97,7 +106,7 @@ namespace Server.Audit {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to User {0} created file {1} on server {2}..
+        ///   Looks up a localized string similar to User {0} created file {1}..
         /// </summary>
         public static string FileCreated {
             get {
@@ -106,7 +115,7 @@ namespace Server.Audit {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to User {0} deleted file {1} on server {2}..
+        ///   Looks up a localized string similar to User {0} deleted file {1}..
         /// </summary>
         public static string FileDeleted {
             get {
@@ -115,7 +124,7 @@ namespace Server.Audit {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to User {0} moved file from {1} to {2} on server {3}..
+        ///   Looks up a localized string similar to User {0} moved file from {1} to {2}..
         /// </summary>
         public static string FileMoved {
             get {
@@ -124,7 +133,16 @@ namespace Server.Audit {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to User {0} accessed folder {1} on server {2}..
+        ///   Looks up a localized string similar to User {0} renamed file from {1} to {2}..
+        /// </summary>
+        public static string FileRenamed {
+            get {
+                return ResourceManager.GetString("FileRenamed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to User {0} accessed folder {1}..
         /// </summary>
         public static string FolderAccessed {
             get {
@@ -133,7 +151,7 @@ namespace Server.Audit {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to User {0} created folder {1} on server {2}..
+        ///   Looks up a localized string similar to User {0} created folder {1}..
         /// </summary>
         public static string FolderCreated {
             get {
@@ -142,7 +160,7 @@ namespace Server.Audit {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to User {0} deleted folder {1} on server {2}..
+        ///   Looks up a localized string similar to User {0} deleted folder {1}..
         /// </summary>
         public static string FolderDeleted {
             get {
@@ -151,7 +169,7 @@ namespace Server.Audit {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to User {0} moved folder from {1} to {2} on server {3}..
+        ///   Looks up a localized string similar to User {0} moved folder from {1} to {2}..
         /// </summary>
         public static string FolderMoved {
             get {
@@ -160,7 +178,16 @@ namespace Server.Audit {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Error on server {0}: {1}..
+        ///   Looks up a localized string similar to User {0} renamed folder from {1} to {2}..
+        /// </summary>
+        public static string FolderRenamed {
+            get {
+                return ResourceManager.GetString("FolderRenamed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Error {0}..
         /// </summary>
         public static string ServerError {
             get {
@@ -169,7 +196,7 @@ namespace Server.Audit {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Server started at {0}..
+        ///   Looks up a localized string similar to Server {0} started..
         /// </summary>
         public static string ServerStarted {
             get {
@@ -178,7 +205,7 @@ namespace Server.Audit {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Server stopped at {0}..
+        ///   Looks up a localized string similar to Server {0} stopped..
         /// </summary>
         public static string ServerStopped {
             get {
@@ -187,7 +214,7 @@ namespace Server.Audit {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Server {0} synchronized with server {1}..
+        ///   Looks up a localized string similar to Server {0} synchronized {1} items with server {2}..
         /// </summary>
         public static string ServerSynchronized {
             get {
@@ -196,7 +223,7 @@ namespace Server.Audit {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Server transitioned from {0} to {1}..
+        ///   Looks up a localized string similar to Server {0} transitioned to primary..
         /// </summary>
         public static string ServerTransitioned {
             get {

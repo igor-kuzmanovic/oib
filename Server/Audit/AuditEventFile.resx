@@ -117,52 +117,61 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="AuthenticationFailed" xml:space="preserve">
+    <value>User {0} unsuccessfully authenticated. Reason: {1}.</value>
+  </data>
   <data name="AuthenticationSuccess" xml:space="preserve">
-    <value>User {0} successfully authenticated on server {1}.</value>
+    <value>User {0} successfully authenticated.</value>
   </data>
   <data name="AuthorizationFailed" xml:space="preserve">
-    <value>User {0} unsuccessfully authorized for {1} on server {2}. Reason: {3}.</value>
+    <value>User {0} unsuccessfully authorized for {1}. Reason: {2}.</value>
   </data>
   <data name="AuthorizationSuccess" xml:space="preserve">
-    <value>User {0} successfully authorized for {1} on server {2}.</value>
+    <value>User {0} successfully authorized for {1}.</value>
   </data>
   <data name="FileAccessed" xml:space="preserve">
-    <value>User {0} accessed file {1} on server {2}.</value>
+    <value>User {0} accessed file {1}.</value>
   </data>
   <data name="FileCreated" xml:space="preserve">
-    <value>User {0} created file {1} on server {2}.</value>
+    <value>User {0} created file {1}.</value>
   </data>
   <data name="FileDeleted" xml:space="preserve">
-    <value>User {0} deleted file {1} on server {2}.</value>
+    <value>User {0} deleted file {1}.</value>
   </data>
   <data name="FileMoved" xml:space="preserve">
-    <value>User {0} moved file from {1} to {2} on server {3}.</value>
+    <value>User {0} moved file from {1} to {2}.</value>
+  </data>
+  <data name="FileRenamed" xml:space="preserve">
+    <value>User {0} renamed file from {1} to {2}.</value>
   </data>
   <data name="FolderAccessed" xml:space="preserve">
-    <value>User {0} accessed folder {1} on server {2}.</value>
+    <value>User {0} accessed folder {1}.</value>
   </data>
   <data name="FolderCreated" xml:space="preserve">
-    <value>User {0} created folder {1} on server {2}.</value>
+    <value>User {0} created folder {1}.</value>
   </data>
   <data name="FolderDeleted" xml:space="preserve">
-    <value>User {0} deleted folder {1} on server {2}.</value>
+    <value>User {0} deleted folder {1}.</value>
   </data>
   <data name="FolderMoved" xml:space="preserve">
-    <value>User {0} moved folder from {1} to {2} on server {3}.</value>
+    <value>User {0} moved folder from {1} to {2}.</value>
+  </data>
+  <data name="FolderRenamed" xml:space="preserve">
+    <value>User {0} renamed folder from {1} to {2}.</value>
   </data>
   <data name="ServerError" xml:space="preserve">
-    <value>Error on server {0}: {1}.</value>
+    <value>Error {0}.</value>
   </data>
   <data name="ServerStarted" xml:space="preserve">
-    <value>Server started at {0}.</value>
+    <value>Server {0} started.</value>
   </data>
   <data name="ServerStopped" xml:space="preserve">
-    <value>Server stopped at {0}.</value>
+    <value>Server {0} stopped.</value>
   </data>
   <data name="ServerSynchronized" xml:space="preserve">
-    <value>Server {0} synchronized with server {1}.</value>
+    <value>Server {0} synchronized {1} items with server {2}.</value>
   </data>
   <data name="ServerTransitioned" xml:space="preserve">
-    <value>Server transitioned from {0} to {1}.</value>
+    <value>Server {0} transitioned to primary.</value>
   </data>
 </root>

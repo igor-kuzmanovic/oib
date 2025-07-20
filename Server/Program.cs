@@ -1,6 +1,7 @@
 using System;
 using System.Security.Principal;
 using System.Threading;
+using Server.Audit;
 using Server.Infrastructure;
 
 namespace Server
@@ -30,9 +31,10 @@ namespace Server
             }
             catch (ApplicationException ex)
             {
-                Console.WriteLine($"ERROR: {ex.Message}");
+                Console.WriteLine($"Fatal error: {ex.Message}");
                 if (ex.InnerException != null)
                     Console.WriteLine($"DETAILS: {ex.InnerException.Message}");
+                AuditFacade.ServerError($"[{fileServer.GetName()}] Fatal error: {ex.Message}");
             }
             finally
             {

@@ -1,5 +1,6 @@
 ﻿using Contracts.Helpers;
 using Contracts.Interfaces;
+using Server.Audit;
 using Server.Services;
 using System;
 using System.Collections.Generic;
@@ -105,6 +106,7 @@ namespace Server.Infrastructure
             behavior = new PrimaryServerBehavior(fileAddress, syncAddress, serverCertificate);
             behavior.Start();
             Console.WriteLine("Server promoted to PRIMARY role.");
+            AuditFacade.ServerTransitioned(GetName());
         }
 
         private static bool IsPortAvailable(int port)
@@ -122,6 +124,8 @@ namespace Server.Infrastructure
             }
             return true;
         }
+
+        public string GetName() { return behavior.GetName(); }
 
         public void Stop()
         {

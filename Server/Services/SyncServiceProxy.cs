@@ -1,5 +1,6 @@
 using Contracts.Helpers;
 using Contracts.Models;
+using Server.Audit;
 using Server.Authorization;
 using System;
 using System.Security.Cryptography.X509Certificates;
@@ -51,6 +52,7 @@ namespace Server.Services
                 Console.WriteLine($"[SyncServiceProxy] GetEventsSinceId failed: {ex.Message}");
                 if (ex.InnerException != null)
                     Console.WriteLine($"[SyncServiceProxy] Inner: {ex.InnerException.Message}");
+                AuditFacade.ServerError($"[SyncServiceProxy] GetEventsSinceId failed: {ex.Message}");
                 return Array.Empty<StorageEvent>();
             }
         }

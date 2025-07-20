@@ -4,6 +4,7 @@ using System.IdentityModel.Claims;
 using System.IdentityModel.Policy;
 using System.Security.Principal;
 using Contracts.Helpers;
+using Server.Audit;
 
 namespace Server.Authorization
 {
@@ -25,18 +26,21 @@ namespace Server.Authorization
             if (!evaluationContext.Properties.TryGetValue("Identities", out object list))
             {
                 Console.WriteLine("[AuthorizationPolicy] Context has no 'identities' property");
+                AuditFacade.AuthenticationFailed("Unknown", "Context has no 'identities' property");
                 return false;
             }
 
             if (!(list is IList<IIdentity> identities) || identities.Count <= 0)
             {
                 Console.WriteLine("[AuthorizationPolicy] Context has no identities");
+                AuditFacade.AuthenticationFailed("Unknown", "Context has no identities");
                 return false;
             }
 
             if (!(identities[0] is WindowsIdentity windowsIdentity))
             {
                 Console.WriteLine("[AuthorizationPolicy] First identity is not a Windows identity");
+                AuditFacade.AuthenticationFailed("Unknown", "First identity is not a Windows identity");
                 return false;
             }
 
@@ -45,6 +49,7 @@ namespace Server.Authorization
             evaluationContext.Properties["Principal"] = principal;
 
             Console.WriteLine("[AuthorizationPolicy] 'Evaluate' success");
+            AuditFacade.AuthenticationSuccess(SecurityHelper.GetName(principal.Identity));
             return true;
         }
     }

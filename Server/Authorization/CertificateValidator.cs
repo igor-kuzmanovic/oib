@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Contracts.Helpers;
+using Server.Audit;
+using System;
 using System.IdentityModel.Selectors;
 using System.Security.Cryptography.X509Certificates;
 
@@ -39,10 +41,12 @@ namespace Server.Authorization
             catch (Exception ex)
             {
                 Console.WriteLine($"[CertificateValidator] Certificate validation exception: {ex.Message}");
+                AuditFacade.AuthenticationFailed(SecurityHelper.GetName(certificate), $"[CertificateValidator] Certificate validation exception: {ex.Message}");
                 throw;
             }
 
             Console.WriteLine("[CertificateValidator] Validate success");
+            AuditFacade.AuthenticationSuccess(SecurityHelper.GetName(certificate));
         }
     }
 }

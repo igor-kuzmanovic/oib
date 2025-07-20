@@ -1,8 +1,11 @@
-﻿using Contracts.Interfaces;
+﻿using Contracts.Helpers;
+using Contracts.Interfaces;
+using Server.Audit;
 using Server.Authorization;
 using Server.Services;
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Policy;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.ServiceModel;
@@ -30,6 +33,7 @@ namespace Server.Infrastructure
         {
             StartFileHost();
             StartSyncHost();
+            AuditFacade.ServerStarted(GetName());
         }
 
         private void StartFileHost()
@@ -53,13 +57,21 @@ namespace Server.Infrastructure
                 IncludeExceptionDetailInFaults = true,
             });
 
-            fileHost.Authorization.ServiceAuthorizationManager = new Server.Authorization.AuthorizationManager();
+            fileHost.Authorization.ServiceAuthorizationManager = new AuthorizationManager();
             fileHost.Authorization.PrincipalPermissionMode = PrincipalPermissionMode.Custom;
-            var policies = new List<System.IdentityModel.Policy.IAuthorizationPolicy>
+            var policies = new List<IAuthorizationPolicy>
             {
                 new AuthorizationPolicy()
             };
             fileHost.Authorization.ExternalAuthorizationPolicies = policies.AsReadOnly();
+
+            ServiceSecurityAuditBehavior newAudit = new ServiceSecurityAuditBehavior
+            {
+                AuditLogLocation = AuditLogLocation.Application,
+                ServiceAuthorizationAuditLevel = AuditLevel.SuccessOrFailure
+            };
+            fileHost.Description.Behaviors.Remove<ServiceSecurityAuditBehavior>();
+            fileHost.Description.Behaviors.Add(newAudit);
 
             try
             {
@@ -69,6 +81,7 @@ namespace Server.Infrastructure
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to open FileWCFService host: {ex.Message}");
+                AuditFacade.ServerError($"Failed to open FileWCFService host: {ex.Message}");
             }
         }
 
@@ -105,13 +118,17 @@ namespace Server.Infrastructure
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to open SyncWCFService host: {ex.Message}");
+                AuditFacade.ServerError($"Failed to open SyncWCFService host: {ex.Message}");
             }
         }
+
+        public string GetName() {  return SecurityHelper.GetName(serverCertificate); }
 
         public void Stop()
         {
             try { fileHost?.Close(); } catch { fileHost?.Abort(); }
             try { syncHost?.Close(); } catch { syncHost?.Abort(); }
+            AuditFacade.ServerStopped(GetName());
         }
     }
 }

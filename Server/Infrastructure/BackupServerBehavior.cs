@@ -1,4 +1,6 @@
-﻿using Contracts.Interfaces;
+﻿using Contracts.Helpers;
+using Contracts.Interfaces;
+using Server.Audit;
 using Server.Services;
 using System;
 using System.Collections.Generic;
@@ -29,6 +31,7 @@ namespace Server.Infrastructure
         public void Start()
         {
             Console.WriteLine("Backup server started. Monitoring primary availability. Will promote if primary is unreachable.");
+            AuditFacade.ServerStarted(GetName());
         }
 
         public bool TrySyncWithPrimary()
@@ -48,6 +51,7 @@ namespace Server.Infrastructure
                             StorageServiceProvider.Instance.SetLastEventId(ev.Id);
                         }
                         Console.WriteLine($"[BackupServerBehavior] Synced {events.Length} events from primary.");
+                        AuditFacade.ServerSynchronized(GetName(), SecurityHelper.GetName(remoteServerCertificate), events.Length);
                     }
                     else
                     {
@@ -61,13 +65,16 @@ namespace Server.Infrastructure
                 Console.WriteLine($"[BackupServerBehavior] Sync with primary failed: {ex.Message}");
                 if (ex.InnerException != null)
                     Console.WriteLine($"[BackupServerBehavior] Inner: {ex.InnerException.Message}");
+                AuditFacade.ServerError($"Sync with {SecurityHelper.GetName(remoteServerCertificate)} failed: {ex.Message}");
                 return false;
             }
         }
 
+        public string GetName() { return SecurityHelper.GetName(clientCertificate); }
+
         public void Stop()
         {
-
+            AuditFacade.ServerStopped(GetName());
         }
     }
 }

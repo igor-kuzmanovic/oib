@@ -4,84 +4,99 @@
     {
         private static readonly Audit audit = new Audit();
 
-        public static void AuthenticationSuccess(string userName, string serverAddress)
+        public static void AuthenticationSuccess(string userName)
         {
-            Audit.AuthenticationSuccess(userName, serverAddress);
+            Audit.AuthenticationSuccess(userName);
         }
 
-        public static void AuthorizationSuccess(string userName, string serviceName, string serverAddress)
+        public static void AuthenticationFailed(string userName, string reason)
         {
-            Audit.AuthorizationSuccess(userName, serviceName, serverAddress);
+            Audit.AuthenticationFailed(userName, reason);
         }
 
-        public static void AuthorizationFailed(string userName, string serviceName, string serverAddress, string reason)
+        public static void AuthorizationSuccess(string userName, string serviceName)
         {
-            Audit.AuthorizationFailed(userName, serviceName, serverAddress, reason);
+            Audit.AuthorizationSuccess(userName, serviceName);
         }
 
-        public static void FileCreated(string userName, string filePath, string serverAddress)
+        public static void AuthorizationFailed(string userName, string serviceName, string reason)
         {
-            Audit.FileCreated(userName, filePath, serverAddress);
+            Audit.AuthorizationFailed(userName, serviceName, reason);
         }
 
-        public static void FolderCreated(string userName, string folderPath, string serverAddress)
+        public static void FileCreated(string userName, string filePath)
         {
-            Audit.FolderCreated(userName, folderPath, serverAddress);
+            Audit.FileCreated(userName, filePath);
         }
 
-        public static void FileDeleted(string userName, string filePath, string serverAddress)
+        public static void FolderCreated(string userName, string folderPath)
         {
-            Audit.FileDeleted(userName, filePath, serverAddress);
+            Audit.FolderCreated(userName, folderPath);
         }
 
-        public static void FolderDeleted(string userName, string folderPath, string serverAddress)
+        public static void FileDeleted(string userName, string filePath)
         {
-            Audit.FolderDeleted(userName, folderPath, serverAddress);
+            Audit.FileDeleted(userName, filePath);
         }
 
-        public static void FileMoved(string userName, string sourcePath, string destinationPath, string serverAddress)
+        public static void FolderDeleted(string userName, string folderPath)
         {
-            Audit.FileMoved(userName, sourcePath, destinationPath, serverAddress);
+            Audit.FolderDeleted(userName, folderPath);
         }
 
-        public static void FolderMoved(string userName, string sourcePath, string destinationPath, string serverAddress)
+        public static void FileMoved(string userName, string sourcePath, string destinationPath)
         {
-            Audit.FolderMoved(userName, sourcePath, destinationPath, serverAddress);
+            Audit.FileMoved(userName, sourcePath, destinationPath);
         }
 
-        public static void FileAccessed(string userName, string filePath, string serverAddress)
+        public static void FileRenamed(string userName, string oldFilePath, string newFilePath)
         {
-            Audit.FileAccessed(userName, filePath, serverAddress);
+            Audit.FileRenamed(userName, oldFilePath, newFilePath);
         }
 
-        public static void FolderAccessed(string userName, string folderPath, string serverAddress)
+        public static void FolderMoved(string userName, string sourcePath, string destinationPath)
         {
-            Audit.FolderAccessed(userName, folderPath, serverAddress);
+            Audit.FolderMoved(userName, sourcePath, destinationPath);
         }
 
-        public static void ServerStarted(string serverAddress)
+        public static void FolderRenamed(string userName, string oldFolderPath, string newFolderPath)
         {
-            Audit.ServerStarted(serverAddress);
+            Audit.FolderRenamed(userName, oldFolderPath, newFolderPath);
         }
 
-        public static void ServerStopped(string serverAddress)
+        public static void FileAccessed(string userName, string filePath)
         {
-            Audit.ServerStopped(serverAddress);
+            Audit.FileAccessed(userName, filePath);
         }
 
-        public static void ServerTransitioned(string fromAddress, string toAddress)
+        public static void FolderAccessed(string userName, string folderPath)
         {
-            Audit.ServerTransitioned(fromAddress, toAddress);
+            Audit.FolderAccessed(userName, folderPath);
         }
 
-        public static void ServerError(string errorMessage, string serverAddress)
+        public static void ServerStarted(string serverName)
         {
-            Audit.ServerError(errorMessage, serverAddress);
+            Audit.ServerStarted(serverName);
+        }
+
+        public static void ServerStopped(string serverName)
+        {
+            Audit.ServerStopped(serverName);
+        }
+
+        public static void ServerTransitioned(string serverName)
+        {
+            Audit.ServerTransitioned(serverName);
+        }
+
+        public static void ServerError(string errorMessage)
+        {
+            Audit.ServerError(errorMessage);
         }
         
-        public static void ServerSynchronized(string fromAddress, string toAddress)
+        public static void ServerSynchronized(string serverName, string remoteServerName, int eventCount)
         {
-            Audit.ServerSynchronized(fromAddress, toAddress);
+            Audit.ServerSynchronized(serverName, remoteServerName, eventCount);
         }
     }
 }
