@@ -8,6 +8,13 @@ namespace Server.Authorization
 {
     public class CertificateValidator : X509CertificateValidator
     {
+        private readonly X509Certificate2 expectedCertificate;
+
+        public CertificateValidator(X509Certificate2 expectedCertificate)
+        {
+            this.expectedCertificate = expectedCertificate;
+        }
+
         public override void Validate(X509Certificate2 certificate)
         {
             Console.WriteLine("[CertificateValidator] Validate called");
@@ -36,6 +43,16 @@ namespace Server.Authorization
                 if (chain.ChainElements.Count > 0 && chain.ChainElements[0].Certificate.Subject == chain.ChainElements[chain.ChainElements.Count - 1].Certificate.Subject)
                 {
                     throw new Exception("Certificate is self-signed.");
+                }
+
+                if (expectedCertificate != null)
+                {
+                    Console.WriteLine($"[CertificateValidator] Expected certificate: Subject='{expectedCertificate.Subject}', Thumbprint='{expectedCertificate.Thumbprint}'");
+                    if (!certificate.Thumbprint.Equals(expectedCertificate.Thumbprint, StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new Exception("Certificate does not match expected endpoint identity.");
+                    }
+                    Console.WriteLine("[CertificateValidator] Certificate matches expected endpoint identity.");
                 }
             }
             catch (Exception ex)

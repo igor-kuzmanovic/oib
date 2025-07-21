@@ -108,7 +108,7 @@ namespace Server.Infrastructure
 
             syncHost.Credentials.ServiceCertificate.Certificate = serverCertificate;
             syncHost.Credentials.ClientCertificate.Authentication.CertificateValidationMode = X509CertificateValidationMode.Custom;
-            syncHost.Credentials.ClientCertificate.Authentication.CustomCertificateValidator = new CertificateValidator();
+            syncHost.Credentials.ClientCertificate.Authentication.CustomCertificateValidator = new CertificateValidator(null);
 
             try
             {

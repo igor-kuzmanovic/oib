@@ -36,7 +36,7 @@ namespace Server.Services
             factory = new ChannelFactory<ISyncWCFService>(binding, endpointAddress);
             factory.Credentials.ClientCertificate.Certificate = clientCertificate;
             factory.Credentials.ServiceCertificate.Authentication.CertificateValidationMode = X509CertificateValidationMode.Custom;
-            factory.Credentials.ServiceCertificate.Authentication.CustomCertificateValidator = new CertificateValidator();
+            factory.Credentials.ServiceCertificate.Authentication.CustomCertificateValidator = new CertificateValidator(remoteServerCertificate);
 
             proxy = factory.CreateChannel();
         }
